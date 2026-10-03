@@ -77,6 +77,70 @@ def encode_image(img) -> str:
     img.save(buf, format="JPEG", quality=85)
     return base64.b64encode(buf.getvalue()).decode("utf-8")
 
+def draw_tap_overlay(img, response_text: str, question: str = ""):
+    # creates an annotated copy of screenshot showing a glowing bullseye on the button
+    if img is None:
+        return None
+    try:
+        from PIL import ImageDraw, ImageFont
+        if isinstance(img, str):
+            img = Image.open(img)
+        elif not isinstance(img, Image.Image):
+            import numpy as np
+            if isinstance(img, np.ndarray):
+                img = Image.fromarray(img)
+
+        annotated = img.convert("RGBA").copy()
+        w, h = annotated.size
+
+        text_lower = (response_text + " " + question).lower()
+
+        # default target is bottom action area (standard for mobile primary buttons)
+        cx, cy = w // 2, int(h * 0.84)
+
+        if any(k in text_lower for k in ["display", "ડિસ્પ્લે", "डिस्प्ले", "font", "ફોન્ટ", "અક્ષર"]):
+            cx, cy = w // 2, int(h * 0.42)
+        elif any(k in text_lower for k in ["top", "ઉપર", "ऊपर"]):
+            cx = int(w * 0.85) if any(k in text_lower for k in ["right", "જમણી", "दाईं"]) else w // 2
+            cy = int(h * 0.15)
+        elif any(k in text_lower for k in ["middle", "center", "વચ્ચે", "बीच"]):
+            cx, cy = w // 2, h // 2
+        elif any(k in text_lower for k in ["need help", "help", "મદદ", "સહાય"]):
+            cx, cy = w // 2, int(h * 0.88)
+        elif any(k in text_lower for k in ["pay", "ચૂકવવું", "ભરવું", "proceed", "હવે"]):
+            cx, cy = w // 2, int(h * 0.84)
+
+        overlay = Image.new("RGBA", annotated.size, (0, 0, 0, 0))
+        draw = ImageDraw.Draw(overlay)
+
+        # glowing target concentric circles
+        draw.ellipse([(cx - 48, cy - 48), (cx + 48, cy + 48)], fill=(255, 60, 60, 60), outline=(255, 50, 50, 210), width=3)
+        draw.ellipse([(cx - 32, cy - 32), (cx + 32, cy + 32)], fill=(255, 60, 60, 110), outline=(255, 255, 255, 240), width=3)
+        draw.ellipse([(cx - 16, cy - 16), (cx + 16, cy + 16)], fill=(255, 0, 0, 230))
+
+        # crosshairs
+        draw.line([(cx - 24, cy), (cx + 24, cy)], fill=(255, 255, 255, 230), width=2)
+        draw.line([(cx, cy - 24), (cx, cy + 24)], fill=(255, 255, 255, 230), width=2)
+
+        # callout badge: "👉 TAP HERE"
+        badge_w, badge_h = 160, 36
+        bx1 = max(10, min(cx - badge_w // 2, w - badge_w - 10))
+        by1 = max(10, cy - 48 - badge_h - 10) if (cy - 48 - badge_h - 10) > 10 else cy + 48 + 10
+        bx2 = bx1 + badge_w
+        by2 = by1 + badge_h
+
+        draw.rounded_rectangle([(bx1, by1), (bx2, by2)], radius=8, fill=(20, 20, 20, 230), outline=(255, 255, 255, 220), width=2)
+
+        try:
+            font = ImageFont.load_default(size=18)
+            draw.text((bx1 + 16, by1 + 8), "👉 TAP HERE", fill=(255, 255, 255, 255), font=font)
+        except Exception:
+            draw.text((bx1 + 16, by1 + 8), "👉 TAP HERE", fill=(255, 255, 255, 255))
+
+        return Image.alpha_composite(annotated, overlay).convert("RGB")
+    except Exception:
+        return img
+
 def detect_sample_type(question: str = "") -> str:
     # matches user intent to one of our canned demo answers when offline
     q_lower = (question or "").lower()
@@ -191,9 +255,9 @@ def extract_json(raw: str) -> dict:
     raise ValueError(f"Could not parse valid JSON from output:\n{raw[:150]}")
 
 def help_me(img, custom_q, preset_q, lang_choice):
-    # tab 1 pipeline: simple numbered steps in the requested language
+    # tab 1 pipeline: simple numbered steps and annotated tap overlay
     if img is None:
-        return "⚠️ **કૃપા કરીને પહેલા તમારા ફોનનો સ્ક્રીનશોટ અપલોડ કરો.** / **Please upload a screenshot first.**", None
+        return "⚠️ **કૃપા કરીને પહેલા તમારા ફોનનો સ્ક્રીનશોટ અપલોડ કરો.** / **Please upload a screenshot first.**", None, None
 
     lang = LANGUAGE_MAP.get(lang_choice, "Gujarati")
     question = (custom_q or "").strip()
@@ -205,7 +269,7 @@ def help_me(img, custom_q, preset_q, lang_choice):
 
     if is_fallback or not raw_output:
         if not is_fallback and err_detail:
-            return f"❌ **Error connecting to Ollama:**\n\n`{err_detail}`\n\n*Please ensure Ollama is running and model '{MODEL_NAME}' is pulled.*", None
+            return f"❌ **Error connecting to Ollama:**\n\n`{err_detail}`\n\n*Please ensure Ollama is running and model '{MODEL_NAME}' is pulled.*", None, None
 
         # fallback to verified demo text if model isn't active
         sample_key = detect_sample_type(question)
@@ -219,11 +283,12 @@ def help_me(img, custom_q, preset_q, lang_choice):
     else:
         result = raw_output
 
+    annotated_overlay = draw_tap_overlay(img, result, question)
     audio_file = generate_speech_file(result, lang)
-    return result, audio_file
+    return result, annotated_overlay, audio_file
 
 def scam_check(img, lang_choice):
-    # tab 2 pipeline: returns json verdict and formats into a high-visibility badge
+    # tab 2 pipeline: returns json verdict, adds upi fraud protection, formats into card
     if img is None:
         return "⚠️ **કૃપા કરીને પહેલા સ્ક્રીનશોટ અપલોડ કરો.** / **Please upload a screenshot first.**", None
 
@@ -256,6 +321,14 @@ def scam_check(img, lang_choice):
     icon_header = ICONS.get(verdict, f"❓ {verdict}")
     card_class = BADGE_CLASSES.get(verdict, "badge-suspicious")
 
+    # specialized UPI collect & refund fraud shield
+    upi_alert = ""
+    combined_check = (verdict + " " + " ".join(reasons) + " " + advice).lower()
+    if any(k in combined_check for k in ["upi", "pin", "પિન", "ઓટીપી", "पिन", "refund", "કલેક્ટ"]):
+        upi_alert = """
+> 🚨 **UPI Safety Alert / UPI સુરક્ષા ચેતવણી:** પૈસા મેળવવા કે રિફંડ લેવા માટે ક્યારેય UPI PIN નાખવો પડતો નથી! જો તમે PIN નાખશો તો તમારા ખાતામાંથી પૈસા કપાઈ જશે! (Entering UPI PIN always sends money, never receives!)
+"""
+
     result = f"""
 <div class="verdict-box {card_class}">
   <h2 style="margin: 0; padding-bottom: 8px;">{icon_header}</h2>
@@ -271,6 +344,7 @@ def scam_check(img, lang_choice):
 ### 💡 સલાહ / सुझाव / Next Step:
 **{advice}**
 
+{upi_alert}
 {is_demo_note}
 
 ---
@@ -411,6 +485,55 @@ JS_STOP_SPEAK = """
 }
 """
 
+# speech recognition to speak questions directly via microphone in browser
+JS_LISTEN_QUESTION = """
+() => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+        alert("Speech recognition is not supported in this browser. Please use Chrome, Edge, or Safari.");
+        return;
+    }
+    const recognition = new SpeechRecognition();
+    recognition.lang = "gu-IN";
+    recognition.continuous = false;
+    recognition.interimResults = false;
+
+    const input = document.querySelector("#help-custom-q textarea, #help-custom-q input");
+    if (!input) return;
+
+    const origPlaceholder = input.placeholder;
+    input.placeholder = "🎙️ Listening... please speak your question now...";
+
+    recognition.onresult = (event) => {
+        const text = event.results[0][0].transcript;
+        input.value = text;
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+        input.placeholder = origPlaceholder;
+    };
+
+    recognition.onerror = (e) => {
+        input.placeholder = origPlaceholder;
+        console.warn("Speech recognition error:", e.error);
+    };
+
+    recognition.onend = () => {
+        input.placeholder = origPlaceholder;
+    };
+
+    recognition.start();
+}
+"""
+
+# one-click alert family on whatsapp with pre-filled warning
+JS_SHARE_WHATSAPP = """
+() => {
+    const el = document.getElementById("scam-output-container");
+    const summary = el ? (el.innerText || el.textContent).substring(0, 250) : "Suspicious phone message.";
+    const text = encodeURIComponent("⚠️ Family Alert: I received this suspicious message on my phone. 'What do I tap?' flagged it as potentially dangerous:\n\n" + summary + "\n\nPlease check before I tap anything.");
+    window.open("https://wa.me/?text=" + text, "_blank");
+}
+"""
+
 with gr.Blocks(title="What do I tap? Helper (Offline Gemma 4)", css=CUSTOM_CSS, theme=gr.themes.Soft()) as demo:
     gr.HTML("""
     <div class="main-title">
@@ -457,12 +580,19 @@ with gr.Blocks(title="What do I tap? Helper (Offline Gemma 4)", css=CUSTOM_CSS, 
                     help_custom_q = gr.Textbox(
                         label="✍️ Or Type Your Own Question (અથવા તમારો પ્રશ્ન લખો)",
                         value="What should I do on this screen?",
+                        elem_id="help-custom-q",
                         placeholder="e.g. How do I pay this bill?"
                     )
+
+                    with gr.Row():
+                        btn_voice_input = gr.Button("🎙️ Speak Question (માઈક્રોફોન બોલો)", size="sm", js=JS_LISTEN_QUESTION)
 
                     btn_help = gr.Button("🔍 Explain Step-by-Step (મને સમજાવો)", variant="primary", elem_classes=["btn-large"])
 
                 with gr.Column(scale=6):
+                    with gr.Accordion("🎯 Visual Tap Target Overlay (ક્યાં અડવું તે જુઓ)", open=True):
+                        help_overlay = gr.Image(label="Where to Tap", type="pil", interactive=False)
+
                     gr.Markdown("### 📋 Step-by-Step Instructions:")
                     with gr.Group(elem_id="help-output-container"):
                         help_output = gr.Markdown(
@@ -490,7 +620,7 @@ with gr.Blocks(title="What do I tap? Helper (Offline Gemma 4)", css=CUSTOM_CSS, 
             btn_help.click(
                 help_me,
                 inputs=[help_img, help_custom_q, help_preset_q, help_lang],
-                outputs=[help_output, help_audio]
+                outputs=[help_output, help_overlay, help_audio]
             )
 
         # tab 2: scam & phishing verification
@@ -522,6 +652,7 @@ with gr.Blocks(title="What do I tap? Helper (Offline Gemma 4)", css=CUSTOM_CSS, 
                     with gr.Row():
                         btn_speak_scam = gr.Button("🔊 Read Aloud (Browser Voice)", size="sm", js=JS_SPEAK_SCAM)
                         btn_stop_scam = gr.Button("⏹️ Stop Audio", size="sm", js=JS_STOP_SPEAK)
+                        btn_share_family = gr.Button("👨‍👩‍👦 Alert Family on WhatsApp", size="sm", variant="secondary", js=JS_SHARE_WHATSAPP)
                     scam_audio = gr.Audio(label="🎧 Recorded Audio File (Optional)", interactive=False)
 
             btn_sample_scam.click(lambda: load_sample_image("2_fake_bank_sms.png"), outputs=scam_img)
@@ -552,6 +683,8 @@ with gr.Blocks(title="What do I tap? Helper (Offline Gemma 4)", css=CUSTOM_CSS, 
 3. **Core Details:**
    - **Privacy First:** Gemma 4 runs 100% locally on your machine with zero cloud calls.
    - **Multilingual Support:** Native reasoning in Gujarati, Hindi, and English.
+   - **Visual Overlay:** Highlights the exact button to tap directly on the screen.
+   - **Voice Accessible:** Browser speech-to-text input and voice read-aloud.
    - **Resilient Fallback:** Automatically falls back to verified sample data if Ollama is still downloading.
             """)
 

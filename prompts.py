@@ -18,8 +18,12 @@ Return ONLY valid JSON with exactly these keys:
 {{"verdict": "SAFE" | "SUSPICIOUS" | "SCAM",
  "reasons": ["short reason 1", "short reason 2", "short reason 3"],
  "advice": "one sentence on what to do next"}}
-Look for: urgency or threats, requests for OTP/PIN/UPI PIN, unknown links,
-lookalike sender names, prizes or refunds, requests to install apps.
+Look for:
+- UPI Collect requests or QR codes claiming to give refunds or prizes (Entering PIN always pays money, never receives).
+- Artificial urgency or threats (e.g. bank account blocked, electricity disconnected today).
+- Requests for OTP, UPI PIN, ATM PIN, or passwords.
+- Unknown links, APK downloads, or lookalike bank sender names.
+- Requests to install screen-sharing apps (AnyDesk, TeamViewer).
 Max 3 reasons, each under 15 words."""
 
 
