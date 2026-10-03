@@ -1,6 +1,21 @@
 # "What do I tap?" Helper
 
-A private, 100% offline multimodal AI assistant that explains confusing smartphone screens in **Gujarati**, **Hindi**, and **English**, and detects financial fraud, phishing links, and cyber scams before users tap them.
+A private, 100% offline multimodal AI assistant that explains confusing smartphone screens in **Gujarati**, **Hindi**, and **English**, visually highlights where to tap, and detects financial fraud, phishing links, and cyber scams before users tap them.
+
+---
+
+## Key Features
+
+- 📱 **Step-by-Step Screen Guidance ("Help Me")**: Upload any phone screenshot, ask a question in plain everyday language, and receive up to 5 simple, numbered instructions.
+- 🎯 **Visual "Where to Tap" Target Overlay**: Draws a high-visibility target ring and `👉 TAP HERE` badge directly on the screenshot so elderly or non-technical users can see exactly where to touch.
+- 🎙️ **Microphone Voice Input**: Ask questions out loud using native browser speech recognition in Gujarati, Hindi, or English without having to type.
+- 🔊 **Voice Readout**: In-browser text-to-speech reads answers aloud in your chosen language with zero external API latency.
+- 🛡️ **Scam & Fraud Detection ("Is this safe?")**: Evaluates bank KYC threats, electricity cut-off notices, lottery claims, and suspicious APK downloads with color-coded safety badges (**SAFE**, **SUSPICIOUS**, **SCAM**).
+- 💸 **UPI Collect & Refund Fraud Shield**: Detects tricky UPI collect requests and fake refunds, alerting users with a clear safety banner: *"Entering a UPI PIN always sends money, never receives money!"*
+- 👨‍👩‍👦 **One-Click WhatsApp Family Alert**: Instantly pre-formats scam details and sends an alert via WhatsApp to family members or trusted contacts for a second opinion.
+- 🔒 **100% Offline & Private**: Powered locally by Google's **Gemma 4 E4B** via **Ollama**. No screenshots, credentials, or personal queries are ever uploaded to cloud servers.
+
+📖 **Looking for a full walkthrough?** See the [Complete Project Walkthrough](WALKTHROUGH.md) for step-by-step instructions, demo screenshot scenarios, and verification checklists.
 
 ---
 
@@ -9,24 +24,27 @@ A private, 100% offline multimodal AI assistant that explains confusing smartpho
 The application is architected to run entirely on-device with zero cloud dependencies. No screenshots, credentials, or personal queries ever leave the host machine.
 
 ```
-                              ┌────────────────────────────────────────────────────────┐
-                              │                 Host Machine / Docker Network          │
-                              │                                                        │
-[Phone Screenshot]            │  ┌────────────────────────┐    ┌────────────────────┐  │
-        │                     │  │   Gradio Application   │    │   Ollama Runtime   │  │
-        ▼                     │  │      (Port 7860)       │───▶│    (Port 11434)    │  │
- [Pick Language]              │  │                        │    │                    │  │
-(Gujarati / Hindi / English)  │  │  - Help Me Pipeline    │◀───│  Gemma 4 E4B       │  │
-        │                     │  │  - Scam Detection Tab  │    │  (Multimodal / 4B) │  │
-        ▼                     │  │  - Web Speech Reader   │    │                    │  │
- [Step Actions / Verdict] ◀───│  └────────────────────────┘    └────────────────────┘  │
-                              │                                          ▲             │
-                              │                                          │             │
-                              │                               ┌─────────────────────┐  │
-                              │                               │ Persistent Volume   │  │
-                              │                               │ (Cached AI Models)  │  │
-                              │                               └─────────────────────┘  │
-                              └────────────────────────────────────────────────────────┘
+                               ┌────────────────────────────────────────────────────────┐
+                               │                 Host Machine / Docker Network          │
+                               │                                                        │
+ [Phone Screenshot]            │  ┌────────────────────────┐    ┌────────────────────┐  │
+         │                     │  │   Gradio Application   │    │   Ollama Runtime   │  │
+         ▼                     │  │      (Port 7860)       │───▶│    (Port 11434)    │  │
+  [Pick Language]              │  │                        │    │                    │  │
+ (Gujarati / Hindi / English)  │  │  - Help Me Pipeline    │◀───│  Gemma 4 E4B       │  │
+         │                     │  │  - Visual Tap Overlay  │    │  (Multimodal / 4B) │  │
+         ▼                     │  │  - Scam Detection Tab  │    │                    │  │
+  [Microphone / Voice Input]   │  │  - UPI Fraud Shield    │    │                    │  │
+         │                     │  │  - WhatsApp Alert      │    │                    │  │
+         ▼                     │  │  - Web Speech Reader   │    │                    │  │
+ [Visual Steps / Safety Card] ◀│  └────────────────────────┘    └────────────────────┘  │
+                               │                                          ▲             │
+                               │                                          │             │
+                               │                               ┌─────────────────────┐  │
+                               │                               │ Persistent Volume   │  │
+                               │                               │ (Cached AI Models)  │  │
+                               │                               └─────────────────────┘  │
+                               └────────────────────────────────────────────────────────┘
 ```
 
 ### Architectural Components
@@ -36,7 +54,8 @@ The application is architected to run entirely on-device with zero cloud depende
 | **Vision Language Model** | **Gemma 4 E4B** | Multimodal instruction-tuned model from Google (~4.5 GB RAM at 4-bit). Understands screenshot UI layout, icons, text, and 140+ languages. |
 | **Model Runtime** | **Ollama** | Local REST API server exposing port `11434` for streaming or structured inference. |
 | **Frontend UI** | **Gradio (Blocks)** | Senior-friendly web interface with high-contrast elements, font scaling, and instant sample loaders. |
-| **Speech Assist** | **Web Speech API & gTTS** | Client-side native browser synthesis for Gujarati, Hindi, and English, with offline audio fallback. |
+| **Visual Tap Annotator** | **Pillow (PIL)** | Programmatically draws high-contrast concentric target circles and badge overlays pointing to target UI coordinates. |
+| **Voice Assist & Audio** | **Web Speech API & gTTS** | Browser-native speech recognition for voice queries and client-side speech synthesis for reading guidance aloud. |
 | **Containerization** | **Docker & Compose** | Multi-container isolation for predictable deployment on macOS, Linux, and Windows. |
 
 ---
@@ -52,8 +71,10 @@ what-do-I-tap-helper/
 ├── .env                        # Active runtime configuration
 ├── .gitignore                  # Git repository exclusion rules
 ├── LICENSE                     # GNU General Public License v3.0 (GPL-3.0)
+├── WALKTHROUGH.md              # Comprehensive step-by-step user guide & test walkthrough
+├── README.md                   # Project overview, architecture, setup steps, and credits
 ├── requirements.txt            # Python package dependencies
-├── app.py                      # Main Gradio application (Help Me & Scam Check pipelines)
+├── app.py                      # Main Gradio application (Help Me, Visual Overlay, Scam Shield)
 ├── config.py                   # Centralized configuration & standard-library Ollama healthcheck
 ├── prompts.py                  # Vision system prompts (Gujarati, Hindi, English) & demo responses
 ├── generate_demo_assets.py     # Programmatic generator for realistic phone UI test screens
@@ -67,7 +88,6 @@ what-do-I-tap-helper/
     ├── run_local.sh            # Local virtual environment setup and execution script
     └── pull_model.sh           # Helper script to pull Gemma 4 into Ollama container or host
 ```
-
 
 ---
 
@@ -143,10 +163,10 @@ This project relies on the following open-source libraries, models, and tools:
 | **[Gemma 4](https://ai.google.dev/gemma)** | Google DeepMind / Google | Gemma Terms of Use | Lightweight, state-of-the-art multimodal vision-language foundation model. |
 | **[Ollama](https://github.com/ollama/ollama)** | Ollama Team | MIT | Local inference runtime engine for running open-weights LLMs. |
 | **[Gradio](https://github.com/gradio-app/gradio)** | Hugging Face Gradio Team | Apache 2.0 | Reactive web UI framework for ML and multimodal applications. |
-| **[Pillow (PIL)](https://python-pillow.org/)** | Jeffrey A. Clark & Contributors | HPND | Image manipulation, resizing, alpha compositing, and thumbnail generation. |
+| **[Pillow (PIL)](https://python-pillow.org/)** | Jeffrey A. Clark & Contributors | HPND | Image manipulation, alpha compositing, and visual "Where to tap" target ring drawing. |
 | **[Requests](https://requests.readthedocs.io/)** | Kenneth Reitz & Contributors | Apache 2.0 | HTTP client for interacting with the local Ollama API. |
 | **[Pydantic](https://docs.pydantic.dev/)** | Samuel Colvin & Contributors | MIT | Data validation and schema parsing. |
-| **[Web Speech API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Speech_API)** | W3C / Browser Standard | Open Web Standard | In-browser client-side text-to-speech without external API latency. |
+| **[Web Speech API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Speech_API)** | W3C / Browser Standard | Open Web Standard | In-browser speech recognition (microphone input) and text-to-speech audio narration. |
 | **[gTTS](https://github.com/pndurette/gTTS)** | Pierre Nicolas Durette | MIT | Optional text-to-speech audio rendering utility. |
 | **Demo UI Assets** | Generated in-repo | GPL-3.0 | Synthetic smartphone interface mockups generated via `generate_demo_assets.py`. |
 
