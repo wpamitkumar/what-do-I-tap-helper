@@ -15,8 +15,6 @@ A private, 100% offline multimodal AI assistant that explains confusing smartpho
 - 👨‍👩‍👦 **One-Click WhatsApp Family Alert**: Instantly pre-formats scam details and sends an alert via WhatsApp to family members or trusted contacts for a second opinion.
 - 🔒 **100% Offline & Private**: Powered locally by Google's **Gemma 4 E4B** via **Ollama**. No screenshots, credentials, or personal queries are ever uploaded to cloud servers.
 
-📖 **Looking for a full walkthrough?** See the [Complete Project Walkthrough](WALKTHROUGH.md) for step-by-step instructions, demo screenshot scenarios, and verification checklists.
-
 ---
 
 ## Architecture
@@ -71,12 +69,12 @@ what-do-I-tap-helper/
 ├── .env                        # Active runtime configuration
 ├── .gitignore                  # Git repository exclusion rules
 ├── LICENSE                     # GNU General Public License v3.0 (GPL-3.0)
-├── WALKTHROUGH.md              # Comprehensive step-by-step user guide & test walkthrough
-├── README.md                   # Project overview, architecture, setup steps, and credits
+├── README.md                   # Project overview, architecture, setup steps, tests, and credits
 ├── requirements.txt            # Python package dependencies
 ├── app.py                      # Main Gradio application (Help Me, Visual Overlay, Scam Shield)
 ├── config.py                   # Centralized configuration & standard-library Ollama healthcheck
 ├── prompts.py                  # Vision system prompts (Gujarati, Hindi, English) & demo responses
+├── test_suite.py               # Automated test suite for configuration, prompts, and JSON parsing
 ├── generate_demo_assets.py     # Programmatic generator for realistic phone UI test screens
 ├── demo/                       # Sample mobile screenshots for testing
 │   ├── 1_electricity_bill.png  # Utility bill payment scenario
@@ -138,6 +136,60 @@ python app.py
 ```
 
 Open **[http://localhost:7860](http://localhost:7860)** in your browser.
+
+---
+
+## Testing & Verification
+
+The project includes an automated test suite (`test_suite.py`) that validates core subsystems with or without Docker, verifying that model prompts, JSON parsing, heuristic classifiers, image rendering, and safety rules work as expected.
+
+### Running the Automated Test Suite
+
+#### Option 1: On Host (Local Python)
+```bash
+python3 test_suite.py
+```
+
+#### Option 2: Inside Running Docker Container
+```bash
+docker compose exec app python test_suite.py
+```
+
+### What the Test Suite Verifies
+
+| Test Case | Scope | What It Validates |
+| :--- | :--- | :--- |
+| **1. Configuration & Ollama Engine** | `config.py` | Validates environment variables, base URL format, model name tag, and live connection/fallback status. |
+| **2. Multilingual Vision Prompts** | `prompts.py` | Verifies prompt formatting for Gujarati (`ગુજરાતી`), Hindi (`हिन्दी`), and English, ensuring UPI fraud rules are enforced. |
+| **3. Resilient JSON Extraction** | `app.py` | Tests edge-case LLM outputs: raw JSON, markdown-wrapped blocks (` ```json...``` `), unfenced blocks, and surrounding chatter. |
+| **4. Multilingual Intent Heuristics** | `app.py` | Tests natural language query categorization across Gujarati, Hindi, and English (bill payments, scam SMS, font zoom, order tracking). |
+| **5. Visual Tap Target Overlay** | `app.py` | Confirms the Pillow annotator successfully draws concentric target rings and `👉 TAP HERE` badges without coordinate overflows. |
+| **6. Demo Screenshots Health** | `demo/` | Verifies that all 4 sample phone screenshots exist and contain valid PNG header signatures (`\x89PNG`). |
+| **7. Licensing Compliance** | Repository | Verifies that the GNU General Public License v3.0 (`LICENSE`) and `README.md` are present and valid. |
+
+### Manual Verification Scenarios
+
+You can also test the application interactively using the built-in demo examples:
+
+1. **Electricity Bill Payment (Help Me Tab)**:
+   - Click the "Electricity Bill" example card.
+   - Question: *"How do I pay this bill?"* (or *"આ લાઈટ બિલ કેવી રીતે ચૂકવવું?"*).
+   - Expected Output: 5 numbered steps pinpointing the **"PROCEED TO PAY"** button, visual target overlay ring around the button, and audio playback.
+
+2. **Fake Bank KYC Phishing (Is This Safe Tab)**:
+   - Click the "Phishing Bank SMS" example card.
+   - Question: *"Is this SMS safe?"* (or *"શું આ મેસેજ સાચો છે?"*).
+   - Expected Output: **SCAM** badge (Red), reasons warning about urgent threats and suspicious links, and a pre-formatted **Alert Family on WhatsApp** button.
+
+3. **Android Display & Font Size (Help Me Tab)**:
+   - Click the "Phone Settings" example card.
+   - Question: *"How do I make text size bigger?"*.
+   - Expected Output: Step-by-step guidance navigating to **Display & Brightness ➔ Font Size**.
+
+4. **E-Commerce Order Delivery (Help Me Tab)**:
+   - Click the "Order Delivered" example card.
+   - Question: *"Where is my package?"*.
+   - Expected Output: Confirms delivery status and guides to the **"Need Help?"** button if items are missing.
 
 ---
 
