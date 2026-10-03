@@ -1,196 +1,157 @@
 # 📱 "What do I tap?" Helper
 
-> **One-line Pitch:** *"A private, offline helper that explains any phone screen in your own language and warns you before you fall for a scam."*
-
-[![Docker Ready](https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker&logoColor=white)](#-running-with-docker-recommended)
-[![Offline Gemma 4](https://img.shields.io/badge/Gemma_4-E4B_Instruction_Tuned-8E75C4)](#-architecture)
-[![Languages](https://img.shields.io/badge/Languages-Gujarati%20%7C%20Hindi%20%7C%20English-blue)](#-key-features)
-[![Privacy First](https://img.shields.io/badge/Privacy-100%25_On--Device-success)](#-architecture)
-
----
-
-## 📖 Overview
-
-Many older adults and non-tech-savvy users struggle with modern smartphone interfaces, unfamiliar buttons, complex menus, and predatory cyber scams. 
-
-**"What do I tap?" Helper** is an **on-device, 100% offline multimodal AI assistant** designed specifically for them:
-1. **Upload a screenshot** of any confusing app or screen.
-2. **Pick a language** (**Gujarati / ગુજરાતી**, **Hindi / हिन्दी**, or **English**).
-3. **Ask a question** (or tap a quick preset like *"How do I pay this bill?"* or *"Where do I tap next?"*).
-4. Get **short, numbered, step-by-step instructions** identifying exact button names, their positions on screen, and safety warnings.
-5. **Scam Detection Tab:** Detects fake bank alerts, lottery fraud, urgency pressure, phishing links, and malicious OTP requests with instant color-coded verdicts (**SAFE**, **SUSPICIOUS**, **SCAM**).
-6. **Zero Cloud Leaks:** Runs completely locally on the device using Google's **Gemma 4 E4B** via Ollama. No private data or personal financial screenshots ever leave the laptop.
+A private, 100% offline multimodal AI assistant that explains confusing smartphone screens in **Gujarati**, **Hindi**, and **English**, and detects financial fraud, phishing links, and cyber scams before users tap them.
 
 ---
 
 ## 🏛️ Architecture
 
+The application is architected to run entirely on-device with zero cloud dependencies. No screenshots, credentials, or personal queries ever leave the host machine.
+
 ```
-                               ┌────────────────────────────────────────────────────────┐
-                               │                 "What do I tap?" Laptop                │
-                               │                                                        │
-[User Phone Screenshot]        │  ┌────────────────────────┐    ┌────────────────────┐  │
-          │                    │  │      Gradio Web UI     │    │   Ollama Engine    │  │
-          ▼                    │  │  (Port 7860 - Docker)  │───▶│  (Port 11434)      │  │
-  [Pick Language]              │  │                        │    │                    │  │
-(Gujarati / Hindi / English)   │  │  - Help Me Tab         │◀───│  Gemma 4 E4B       │  │
-          │                    │  │  - Scam Check Tab      │    │  (Multimodal / 4B) │  │
-          ▼                    │  │  - Speech Synthesis   │    │                    │  │
- [Numbered Steps / Verdict] ◀──│  └────────────────────────┘    └────────────────────┘  │
-                               │                                                        │
-                               │  🔒 100% Local Container Network (Zero Cloud Calls)     │
-                               └────────────────────────────────────────────────────────┘
+                              ┌────────────────────────────────────────────────────────┐
+                              │                 Host Machine / Docker Network          │
+                              │                                                        │
+[Phone Screenshot]            │  ┌────────────────────────┐    ┌────────────────────┐  │
+        │                     │  │   Gradio Application   │    │   Ollama Runtime   │  │
+        ▼                     │  │      (Port 7860)       │───▶│    (Port 11434)    │  │
+ [Pick Language]              │  │                        │    │                    │  │
+(Gujarati / Hindi / English)  │  │  - Help Me Pipeline    │◀───│  Gemma 4 E4B       │  │
+        │                     │  │  - Scam Detection Tab  │    │  (Multimodal / 4B) │  │
+        ▼                     │  │  - Web Speech Reader   │    │                    │  │
+ [Step Actions / Verdict] ◀───│  └────────────────────────┘    └────────────────────┘  │
+                              │                                          ▲             │
+                              │                                          │             │
+                              │                               ┌─────────────────────┐  │
+                              │                               │ Persistent Volume   │  │
+                              │                               │ (Cached AI Models)  │  │
+                              │                               └─────────────────────┘  │
+                              └────────────────────────────────────────────────────────┘
 ```
 
-| Layer | Choice & Role |
-| :--- | :--- |
-| **Model** | **Gemma 4 E4B instruction-tuned** (multimodal vision + text, 140+ languages, runs in ~4.5 GB RAM at 4-bit quantization). |
-| **Runtime** | **Ollama** in Docker or local host (exposes local REST API on port `11434`). |
-| **Application** | **Python + Gradio (Blocks)** with high-contrast, senior-friendly typography and quick demo buttons. |
-| **Structured Output** | JSON format enforcement for the Scam Check tab to render color-coded risk cards. |
-| **Audio Assist** | Text-to-speech audio reader for step instructions. |
-| **Docker** | Multi-container setup with persistent volume for cached AI models. |
+### Architectural Components
+
+| Component | Technology | Description |
+| :--- | :--- | :--- |
+| **Vision Language Model** | **Gemma 4 E4B** | Multimodal instruction-tuned model from Google (~4.5 GB RAM at 4-bit). Understands screenshot UI layout, icons, text, and 140+ languages. |
+| **Model Runtime** | **Ollama** | Local REST API server exposing port `11434` for streaming or structured inference. |
+| **Frontend UI** | **Gradio (Blocks)** | Senior-friendly web interface with high-contrast elements, font scaling, and instant sample loaders. |
+| **Speech Assist** | **Web Speech API & gTTS** | Client-side native browser synthesis for Gujarati, Hindi, and English, with offline audio fallback. |
+| **Containerization** | **Docker & Compose** | Multi-container isolation for predictable deployment on macOS, Linux, and Windows. |
 
 ---
 
-## 🚀 Running with Docker (Recommended)
+## 📂 File Structure
 
-### 1. Prerequisites
-- [Docker](https://docs.docker.com/get-docker/) & Docker Compose installed.
+```
+what-do-I-tap-helper/
+├── Dockerfile                  # Container definition with Python 3.11, audio libraries, and healthcheck
+├── docker-compose.yml          # Compose specification defining app, ollama, and persistent volume
+├── .dockerignore               # Build exclusion rules
+├── .env.example                # Environment variable configuration template
+├── .env                        # Active runtime configuration
+├── .gitignore                  # Git repository exclusion rules
+├── LICENSE                     # GNU General Public License v3.0 (GPL-3.0)
+├── requirements.txt            # Python package dependencies
+├── app.py                      # Main Gradio application (Help Me & Scam Check pipelines)
+├── config.py                   # Centralized configuration & standard-library Ollama healthcheck
+├── prompts.py                  # Vision system prompts (Gujarati, Hindi, English) & demo responses
+├── generate_demo_assets.py     # Programmatic generator for realistic phone UI test screens
+├── demo/                       # Sample mobile screenshots for testing
+│   ├── 1_electricity_bill.png  # Utility bill payment scenario
+│   ├── 2_fake_bank_sms.png     # Phishing SMS asking for urgent KYC/OTP
+│   ├── 3_phone_settings.png    # Native OS settings (Display & Font size)
+│   └── 4_order_delivered.png   # E-commerce delivery confirmation
+└── scripts/
+    ├── run_docker.sh           # Automated Docker Compose launcher with engine detection
+    ├── run_local.sh            # Local virtual environment setup and execution script
+    └── pull_model.sh           # Helper script to pull Gemma 4 into Ollama container or host
+```
 
-### 2. Start Services
-From the project root:
+---
+
+## 📦 Third-Party Resources & Credits
+
+This project relies on the following open-source libraries, models, and tools:
+
+| Resource | Author / Provider | License | Purpose / Role |
+| :--- | :--- | :--- | :--- |
+| **[Gemma 4](https://ai.google.dev/gemma)** | Google DeepMind / Google | Gemma Terms of Use | Lightweight, state-of-the-art multimodal vision-language foundation model. |
+| **[Ollama](https://github.com/ollama/ollama)** | Ollama Team | MIT | Local inference runtime engine for running open-weights LLMs. |
+| **[Gradio](https://github.com/gradio-app/gradio)** | Hugging Face Gradio Team | Apache 2.0 | Reactive web UI framework for ML and multimodal applications. |
+| **[Pillow (PIL)](https://python-pillow.org/)** | Jeffrey A. Clark & Contributors | HPND | Image manipulation, resizing, alpha compositing, and thumbnail generation. |
+| **[Requests](https://requests.readthedocs.io/)** | Kenneth Reitz & Contributors | Apache 2.0 | HTTP client for interacting with the local Ollama API. |
+| **[Pydantic](https://docs.pydantic.dev/)** | Samuel Colvin & Contributors | MIT | Data validation and schema parsing. |
+| **[Web Speech API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Speech_API)** | W3C / Browser Standard | Open Web Standard | In-browser client-side text-to-speech without external API latency. |
+| **[gTTS](https://github.com/pndurette/gTTS)** | Pierre Nicolas Durette | MIT | Optional text-to-speech audio rendering utility. |
+| **Demo UI Assets** | Generated in-repo | GPL-3.0 | Synthetic smartphone interface mockups generated via `generate_demo_assets.py`. |
+
+---
+
+## 🚀 Steps to Run the Project
+
+### Option A: Running with Docker (Recommended)
+
+#### 1. Start the Containers
+Ensure Docker Desktop is running, then execute:
 ```bash
 docker compose up --build -d
 ```
-This spins up:
-- **`ollama`** container on `http://localhost:11434` with persistent volume `what-do-i-tap-ollama-models`.
-- **`app`** container hosting the Gradio UI on `http://localhost:7860`.
+This launches:
+- **Gradio Web Interface**: `http://localhost:7860`
+- **Ollama Engine**: `http://localhost:11434`
 
-### 3. Pull Gemma 4 Model into the Container
-Run this once to download Gemma 4 into Ollama:
+#### 2. Download the Multimodal Model
+Pull the Gemma 4 model into the persistent Ollama storage volume:
 ```bash
 docker compose exec ollama ollama pull gemma4:e4b
 ```
-*(If your laptop has less than 8 GB of RAM, you can use `gemma4:e2b` by updating `MODEL_NAME` in `.env`)*
+*(For laptops with limited RAM under 8 GB, use `gemma4:e2b` and set `MODEL_NAME=gemma4:e2b` in `.env`)*
 
-### 4. Open Application
-Open your browser and visit:
-👉 **[http://localhost:7860](http://localhost:7860)**
+#### 3. Open the App
+Visit **[http://localhost:7860](http://localhost:7860)** in your browser.
 
 ---
 
-## 💻 Running Locally (Without Docker)
+### Option B: Running Locally (Without Docker)
 
-If you prefer to run directly on your host machine:
-
-### 1. Install Ollama and pull Gemma 4
+#### 1. Install & Start Ollama
+Install Ollama from [ollama.com](https://ollama.com/) and pull the model:
 ```bash
-# In your host terminal:
 ollama pull gemma4:e4b
 ```
 
-### 2. Set Up Python Environment
+#### 2. Set Up Python Environment
 ```bash
 # Create and activate virtual environment
 python3 -m venv .venv
 source .venv/bin/activate
 
-# Install dependencies
+# Install requirements
 pip install -r requirements.txt
 
-# Run the app
+# Run the application
 python app.py
 ```
+
 Open **[http://localhost:7860](http://localhost:7860)** in your browser.
 
 ---
 
-## 🎯 4-Hour Hackathon Workflow
+## ⚙️ Configuration (`.env`)
 
-| Phase | Milestone | Deliverable |
+| Variable | Default Value | Description |
 | :--- | :--- | :--- |
-| **Hour 1 (0:00 - 1:00)** | Model Verification & Vision Pipeline | Tested multimodal API call in terminal; benchmarked latency in Gujarati, Hindi, and English. |
-| **Hour 2 (1:00 - 2:00)** | "Help Me" Tab & Accessible UI | Gradio Blocks layout, large senior-friendly fonts, numbered steps with button positions, preset question chips. |
-| **Hour 3 (2:00 - 3:00)** | "Is This Safe?" Scam Tab & Polish | Structured JSON output parsing, color-coded badges (🟢 SAFE, 🟡 SUSPICIOUS, 🔴 SCAM), permanent security warnings, speech assist. |
-| **Hour 4 (3:00 - 4:00)** | Edge-Case Testing, Demo Recording & Pitch | Test edge cases (no image, blurry screen), freeze code, record 90s backup video, rehearse pitch. |
+| `OLLAMA_BASE_URL` | `http://localhost:11434` | Endpoint for the Ollama API (set to `http://ollama:11434` in Docker). |
+| `MODEL_NAME` | `gemma4:e4b` | Multimodal model tag (`gemma4:e4b` or `gemma4:e2b`). |
+| `GRADIO_SERVER_NAME`| `0.0.0.0` | Host binding for Gradio. |
+| `GRADIO_SERVER_PORT`| `7860` | Web server port. |
+| `IMAGE_MAX_SIZE` | `1024` | Maximum image dimension in pixels before encoding (smaller = faster). |
+| `DEMO_FALLBACK` | `true` | Serves verified demo outputs if Ollama is offline or model is downloading. |
 
 ---
 
-## 🧪 Demo Screenshots & Test Cases
+## 📄 License
 
-The application includes 4 built-in test screenshots located in `demo/`, with 1-click test buttons directly in the UI:
-
-| Sample | Screenshot File | Question | Expected Output |
-| :--- | :--- | :--- | :--- |
-| ⚡ **Electricity Bill** | `demo/1_electricity_bill.png` | *"How do I pay this bill?"* | 3 to 5 steps naming the real **"Pay Now"** button at the bottom; warning never to share UPI PIN. |
-| 🚨 **Fake Bank SMS** | `demo/2_fake_bank_sms.png` | *"Is this safe?"* | Verdict: **🔴 SCAM**, reasons cite artificial urgency ("Account Blocked"), unknown link, and OTP phishing. |
-| ⚙️ **Phone Settings** | `demo/3_phone_settings.png` | *"How do I make the text bigger?"* | Steps to locate **"Display"**, tap **"Font size and style"**, and slide text scaler. |
-| 📦 **Delivery Order** | `demo/4_order_delivered.png` | *"Is this safe?"* | Verdict: **🟢 SAFE**, legitimate delivery confirmation, advice to contact in-app help if package missing. |
-
----
-
-## 🎤 90-Second Pitch Script
-
-- **[0:00 - 0:15] Problem:**  
-  *"My grandmother cannot tell a real bank message from a phishing scam, and she is afraid to tap anything on her phone for fear of losing her savings."*
-- **[0:15 - 0:45] Help Me Demo:**  
-  *"With 'What do I tap?', she snaps a screenshot of an electricity bill and asks in Gujarati: 'આ બિલ કેવી રીતે ભરવું?'. Gemma 4 reads the screen offline and gives her 3 clear steps: 'Look at the bottom, tap the green Pay Now button, and enter your UPI PIN safely'."*
-- **[0:45 - 1:10] Scam Check Demo:**  
-  *"Next, she gets an SMS claiming her bank account is blocked. She switches to the Scam Check tab: instantly, a bright red **SCAM WARNING** appears: 'Fake urgency, suspicious link, and illegal request for OTP'."*
-- **[1:10 - 1:20] Why Gemma 4:**  
-  *"Gemma 4 E4B is multimodal, understands 140+ languages natively, and fits in under 5 GB of RAM directly on a standard laptop."*
-- **[1:20 - 1:30] Close:**  
-  *"It's 100% private, free, and nothing ever leaves her phone. Thank you!"*
-
----
-
-## 🛡️ Risks and Fallback Strategy
-
-| Risk | Mitigation |
-| :--- | :--- |
-| **Model tag differs in Ollama** | Configurable via `MODEL_NAME` in `.env` or the UI Status tab. |
-| **Inference latency on older laptops** | Built-in `IMAGE_MAX_SIZE=1024` thumbnail compression downsamples high-res screenshots before inference. |
-| **Ollama still downloading during demo** | Built-in **Demo Fallback Mode** (`DEMO_FALLBACK=true` in `.env`) automatically serves verified demo responses for sample screenshots so presenters never get stuck with a blank screen. |
-| **Scam JSON parsing issues** | `clean_json_markdown()` automatically strips backticks; falls back to clean raw text if JSON is malformed. |
-
----
-
-## 📂 Project Structure
-
-```
-what-do-I-tap-helper/
-├── Dockerfile                  # Production container for Gradio app
-├── docker-compose.yml          # Multi-container setup (app + ollama + model-puller)
-├── .dockerignore               # Optimized container build
-├── .env.example                # Environment variables template
-├── .env                        # Active environment configuration
-├── requirements.txt            # Python dependencies (gradio, requests, pillow, gtts)
-├── app.py                      # Core Gradio UI (Help Me & Scam Check tabs)
-├── config.py                   # Centralized configuration & Ollama health check
-├── prompts.py                  # Multilingual prompts & verified demo fallbacks
-├── generate_demo_assets.py     # Script generating mock phone screenshots
-├── demo/                       # 4 realistic sample test screenshots
-│   ├── 1_electricity_bill.png
-│   ├── 2_fake_bank_sms.png
-│   ├── 3_phone_settings.png
-│   └── 4_order_delivered.png
-├── scripts/
-│   ├── run_docker.sh           # One-click Docker launcher
-│   ├── run_local.sh            # Local virtualenv runner
-│   └── pull_model.sh           # Model download helper
-└── README.md                   # Complete documentation & Pitch guide
-```
-
----
-
-## 📋 Hackathon Submission Checklist
-
-- [x] Code pushed to GitHub with comprehensive README.
-- [x] Docker setup (`Dockerfile` & `docker-compose.yml`) tested and documented.
-- [x] Gemma 4 E4B multimodal offline prompts configured for Gujarati, Hindi, and English.
-- [x] Tab 1 ("Help Me") with numbered steps and button location guidance.
-- [x] Tab 2 ("Is This Safe?") with JSON-parsed color-coded verdict (SAFE / SUSPICIOUS / SCAM).
-- [x] 4 realistic demo screenshots created in `demo/` with 1-click test buttons.
-- [x] Resilient demo fallback mode ensuring zero crashes on stage.
-- [x] 90-second pitch script and demo workflow rehearsed.
+This project is licensed under the **GNU General Public License v3.0 (GPL-3.0)**.  
+See the [LICENSE](LICENSE) file for the complete terms and conditions.
