@@ -11,8 +11,18 @@ if ! docker info > /dev/null 2>&1; then
     exit 1
 fi
 
-echo "🐳 Building and starting containers (App + Ollama)..."
-docker compose up --build -d
+# Detect docker compose version
+if docker compose version >/dev/null 2>&1; then
+    COMPOSE="docker compose"
+elif command -v docker-compose >/dev/null 2>&1; then
+    COMPOSE="docker-compose"
+else
+    echo "❌ Error: Neither 'docker compose' nor 'docker-compose' was found."
+    exit 1
+fi
+
+echo "🐳 Building and starting containers with $COMPOSE (App + Ollama)..."
+$COMPOSE up --build -d
 
 echo ""
 echo "✅ Containers are starting up!"

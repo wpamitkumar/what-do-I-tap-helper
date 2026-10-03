@@ -9,22 +9,32 @@ DEMO_DIR.mkdir(parents=True, exist_ok=True)
 def generate_with_pil():
     from PIL import Image, ImageDraw, ImageFont
 
+    def get_font(size: int):
+        try:
+            return ImageFont.load_default(size=size)
+        except TypeError:
+            return ImageFont.load_default()
+        except Exception:
+            return None
+
     def create_mockup(title_text, accent_color, content_builder):
         width, height = 720, 1280
         img = Image.new("RGB", (width, height), color=(245, 247, 250))
         draw = ImageDraw.Draw(img)
+        font_sm = get_font(18)
+        font_md = get_font(24)
 
         # Phone Status bar
         draw.rectangle([(0, 0), (width, 48)], fill=(30, 35, 45))
-        draw.text((24, 14), "10:30 AM", fill=(255, 255, 255))
-        draw.text((width - 120, 14), "5G  | 98%", fill=(255, 255, 255))
+        draw.text((24, 14), "10:30 AM", fill=(255, 255, 255), font=font_sm)
+        draw.text((width - 120, 14), "5G  | 98%", fill=(255, 255, 255), font=font_sm)
 
         # App Bar
         draw.rectangle([(0, 48), (width, 130)], fill=accent_color)
-        draw.text((30, 75), title_text, fill=(255, 255, 255))
+        draw.text((30, 75), title_text, fill=(255, 255, 255), font=font_md)
 
         # Build custom content
-        content_builder(draw, width, height)
+        content_builder(draw, width, height, get_font)
 
         # Phone Navigation Bar (Bottom)
         draw.rectangle([(0, height - 60), (width, height)], fill=(20, 24, 30))
@@ -34,34 +44,43 @@ def generate_with_pil():
         return img
 
     # 1. Electricity Bill Screen
-    def draw_bill(draw, w, h):
+    def draw_bill(draw, w, h, get_font=None):
+        f_title = get_font(26) if get_font else None
+        f_text = get_font(20) if get_font else None
+        f_amount = get_font(36) if get_font else None
+        f_btn = get_font(26) if get_font else None
+
         # Card
         draw.rounded_rectangle([(30, 160), (w - 30, 520)], radius=16, fill=(255, 255, 255), outline=(220, 224, 230), width=2)
-        draw.text((60, 190), "GUJARAT ELECTRICITY BOARD (UGVCL)", fill=(80, 90, 105))
-        draw.text((60, 230), "Consumer No: 08392-49102-1", fill=(30, 40, 55))
-        draw.text((60, 270), "Bill Period: SEP 2026", fill=(100, 110, 125))
-        draw.text((60, 320), "Total Amount Due:", fill=(80, 90, 105))
-        draw.text((60, 355), "₹ 1,450.00", fill=(25, 135, 84))
-        draw.text((60, 430), "Due Date: 15 Oct 2026", fill=(220, 53, 69))
+        draw.text((60, 190), "GUJARAT ELECTRICITY BOARD (UGVCL)", fill=(80, 90, 105), font=f_title)
+        draw.text((60, 235), "Consumer No: 08392-49102-1", fill=(30, 40, 55), font=f_text)
+        draw.text((60, 275), "Bill Period: SEP 2026", fill=(100, 110, 125), font=f_text)
+        draw.text((60, 320), "Total Amount Due:", fill=(80, 90, 105), font=f_text)
+        draw.text((60, 355), "₹ 1,450.00", fill=(25, 135, 84), font=f_amount)
+        draw.text((60, 435), "Due Date: 15 Oct 2026", fill=(220, 53, 69), font=f_text)
 
         # Green Pay Now button
         draw.rounded_rectangle([(40, 560), (w - 40, 650)], radius=12, fill=(25, 135, 84))
-        draw.text((w // 2 - 60, 590), "PAY NOW", fill=(255, 255, 255))
+        draw.text((w // 2 - 75, 590), "PAY NOW", fill=(255, 255, 255), font=f_btn)
 
         # Security note
         draw.rectangle([(40, 680), (w - 40, 780)], fill=(235, 245, 255), outline=(180, 210, 245))
-        draw.text((60, 710), "Official Utility Payment Portal", fill=(13, 110, 253))
-        draw.text((60, 740), "Never share your UPI PIN or Bank OTP with anyone.", fill=(100, 100, 100))
+        draw.text((60, 705), "Official Utility Payment Portal", fill=(13, 110, 253), font=f_text)
+        draw.text((60, 740), "Never share your UPI PIN or Bank OTP with anyone.", fill=(100, 100, 100), font=f_text)
 
     img_bill = create_mockup("Electricity Bill Payment", (13, 110, 253), draw_bill)
     img_bill.save(DEMO_DIR / "1_electricity_bill.png")
 
     # 2. Fake Bank SMS Phishing Screen
-    def draw_scam(draw, w, h):
+    def draw_scam(draw, w, h, get_font=None):
+        f_sender = get_font(24) if get_font else None
+        f_sub = get_font(18) if get_font else None
+        f_body = get_font(22) if get_font else None
+
         # SMS conversation card
         draw.rounded_rectangle([(30, 160), (w - 30, 300)], radius=12, fill=(255, 255, 255), outline=(220, 224, 230))
-        draw.text((60, 185), "Sender: VK-SBI-ALERT (Unknown)", fill=(220, 53, 69))
-        draw.text((60, 220), "Today, 10:14 AM", fill=(120, 120, 120))
+        draw.text((60, 185), "Sender: VK-SBI-ALERT (Unknown)", fill=(220, 53, 69), font=f_sender)
+        draw.text((60, 225), "Today, 10:14 AM", fill=(120, 120, 120), font=f_sub)
 
         # Scam SMS Bubble
         draw.rounded_rectangle([(30, 330), (w - 30, 680)], radius=16, fill=(255, 235, 235), outline=(230, 160, 160), width=2)
@@ -79,20 +98,22 @@ def generate_with_pil():
         y_offset = 360
         for line in lines:
             color = (200, 20, 20) if "http" in line or "URGENT" in line else (30, 30, 30)
-            draw.text((50, y_offset), line, fill=color)
+            draw.text((50, y_offset), line, fill=color, font=f_body)
             y_offset += 32
 
         # Threat highlights
         draw.rectangle([(40, 720), (w - 40, 840)], fill=(255, 243, 205), outline=(255, 193, 7))
-        draw.text((60, 750), "Warning Signs: Threatens penalty + fake urgent link", fill=(133, 100, 4))
-        draw.text((60, 790), "Legitimate banks never send unverified link URLs.", fill=(133, 100, 4))
+        draw.text((60, 750), "Warning Signs: Threatens penalty + fake urgent link", fill=(133, 100, 4), font=f_sub)
+        draw.text((60, 790), "Legitimate banks never send unverified link URLs.", fill=(133, 100, 4), font=f_sub)
 
     img_scam = create_mockup("Messages (SMS)", (50, 60, 75), draw_scam)
     img_scam.save(DEMO_DIR / "2_fake_bank_sms.png")
 
     # 3. Settings Screen (Font Size / Display)
-    def draw_settings(draw, w, h):
-        # Settings list
+    def draw_settings(draw, w, h, get_font=None):
+        f_title = get_font(24) if get_font else None
+        f_sub = get_font(18) if get_font else None
+
         items = [
             ("Connections", "Wi-Fi, Bluetooth, Flight mode"),
             ("Sounds and vibration", "Sound mode, Ringtone"),
@@ -108,34 +129,37 @@ def generate_with_pil():
             bg_color = (230, 242, 255) if is_highlight else (255, 255, 255)
             outline_col = (13, 110, 253) if is_highlight else (230, 230, 230)
             draw.rounded_rectangle([(30, y), (w - 30, y + 90)], radius=10, fill=bg_color, outline=outline_col, width=2 if is_highlight else 1)
-            draw.text((60, y + 18), title, fill=(13, 110, 253) if is_highlight else (20, 25, 35))
-            draw.text((60, y + 50), sub, fill=(110, 115, 125))
-            draw.text((w - 70, y + 30), ">", fill=(150, 150, 150))
+            draw.text((60, y + 18), title, fill=(13, 110, 253) if is_highlight else (20, 25, 35), font=f_title)
+            draw.text((60, y + 50), sub, fill=(110, 115, 125), font=f_sub)
+            draw.text((w - 70, y + 30), ">", fill=(150, 150, 150), font=f_title)
             y += 105
 
-        # Callout arrow pointing to Display
         draw.rounded_rectangle([(40, y + 20), (w - 40, y + 90)], radius=8, fill=(240, 240, 240))
-        draw.text((60, y + 45), "Tap 'Display' to adjust font size and text scaling", fill=(50, 50, 50))
+        draw.text((60, y + 45), "Tap 'Display' to adjust font size and text scaling", fill=(50, 50, 50), font=f_sub)
 
     img_settings = create_mockup("Settings", (33, 37, 41), draw_settings)
     img_settings.save(DEMO_DIR / "3_phone_settings.png")
 
     # 4. Genuine Order Delivery Screen
-    def draw_order(draw, w, h):
+    def draw_order(draw, w, h, get_font=None):
+        f_title = get_font(26) if get_font else None
+        f_sub = get_font(20) if get_font else None
+        f_btn = get_font(22) if get_font else None
+
         draw.rounded_rectangle([(30, 160), (w - 30, 500)], radius=14, fill=(255, 255, 255), outline=(220, 225, 230))
-        draw.text((60, 190), "DELIVERED TODAY", fill=(25, 135, 84))
-        draw.text((60, 230), "Grocery & Household Supplies Order #940182", fill=(40, 45, 55))
-        draw.text((60, 270), "Delivered to: Home (Tower B, Flat 402)", fill=(100, 105, 115))
-        draw.line([(60, 310), (w - 60, 310)], fill=(230, 230, 230), width=1)
-        draw.text((60, 330), "Package handed to resident at front door.", fill=(60, 70, 80))
-        draw.text((60, 370), "Item total: ₹ 820.00 (Paid via UPI)", fill=(100, 105, 115))
+        draw.text((60, 190), "DELIVERED TODAY", fill=(25, 135, 84), font=f_title)
+        draw.text((60, 235), "Grocery & Household Supplies Order #940182", fill=(40, 45, 55), font=f_sub)
+        draw.text((60, 275), "Delivered to: Home (Tower B, Flat 402)", fill=(100, 105, 115), font=f_sub)
+        draw.line([(60, 315), (w - 60, 315)], fill=(230, 230, 230), width=1)
+        draw.text((60, 335), "Package handed to resident at front door.", fill=(60, 70, 80), font=f_sub)
+        draw.text((60, 375), "Item total: ₹ 820.00 (Paid via UPI)", fill=(100, 105, 115), font=f_sub)
 
         # Buttons
         draw.rounded_rectangle([(40, 540), (w - 40, 620)], radius=10, fill=(255, 255, 255), outline=(13, 110, 253), width=2)
-        draw.text((w // 2 - 50, 565), "Need Help?", fill=(13, 110, 253))
+        draw.text((w // 2 - 60, 565), "Need Help?", fill=(13, 110, 253), font=f_btn)
 
         draw.rounded_rectangle([(40, 640), (w - 40, 720)], radius=10, fill=(245, 245, 245))
-        draw.text((w // 2 - 60, 665), "Rate Delivery", fill=(80, 80, 80))
+        draw.text((w // 2 - 65, 665), "Rate Delivery", fill=(80, 80, 80), font=f_btn)
 
     img_order = create_mockup("Order Details", (245, 130, 32), draw_order)
     img_order.save(DEMO_DIR / "4_order_delivered.png")

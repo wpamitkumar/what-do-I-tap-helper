@@ -1,5 +1,7 @@
 import os
-import requests
+import json
+import urllib.request
+import urllib.error
 from typing import Tuple, List
 
 # Core Configuration
@@ -26,24 +28,26 @@ LANGUAGE_MAP = {
 
 def check_ollama_connection() -> Tuple[bool, str, List[str]]:
     """
-    Checks if Ollama is responding and lists available models.
+    Checks if Ollama is responding and lists available models using standard library.
     Returns: (is_online, message, model_list)
     """
+    url = f"{OLLAMA_BASE_URL}/api/tags"
     try:
-        url = f"{OLLAMA_BASE_URL}/api/tags"
-        res = requests.get(url, timeout=3)
-        if res.status_code == 200:
-            data = res.json()
-            models = [m.get("name", "") for m in data.get("models", [])]
-            has_target = any(MODEL_NAME in m for m in models)
-            if has_target:
-                msg = f"Connected to Ollama ({MODEL_NAME} ready)"
-            elif models:
-                msg = f"Connected to Ollama (Available: {', '.join(models[:3])}; target '{MODEL_NAME}' not found)"
+        req = urllib.request.Request(url, headers={"User-Agent": "WhatDoITap/1.0"})
+        with urllib.request.urlopen(req, timeout=3) as res:
+            if res.status == 200:
+                data = json.loads(res.read().decode("utf-8"))
+                models = [m.get("name", "") for m in data.get("models", [])]
+                has_target = any(MODEL_NAME in m for m in models)
+                if has_target:
+                    msg = f"Connected to Ollama ({MODEL_NAME} ready)"
+                elif models:
+                    msg = f"Connected to Ollama (Available: {', '.join(models[:3])}; target '{MODEL_NAME}' not found)"
+                else:
+                    msg = f"Ollama is running, but no models found. Run: ollama pull {MODEL_NAME}"
+                return True, msg, models
             else:
-                msg = f"Ollama is running, but no models found. Run: ollama pull {MODEL_NAME}"
-            return True, msg, models
-        else:
-            return False, f"Ollama returned HTTP {res.status_code}", []
-    except Exception as e:
+                return False, f"Ollama returned HTTP {res.status}", []
+    except Exception:
         return False, f"Ollama offline ({OLLAMA_BASE_URL})", []
+

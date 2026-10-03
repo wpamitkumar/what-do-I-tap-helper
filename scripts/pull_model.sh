@@ -17,7 +17,11 @@ fi
 # Check if Docker Ollama container is running
 if docker ps --format '{{.Names}}' | grep -q "what-do-i-tap-ollama"; then
     echo "🐳 Pulling via Docker Ollama container..."
-    docker exec -it what-do-i-tap-ollama ollama pull "$MODEL"
+    IT_FLAG=""
+    if [ -t 0 ]; then
+        IT_FLAG="-it"
+    fi
+    docker exec $IT_FLAG what-do-i-tap-ollama ollama pull "$MODEL"
     exit 0
 fi
 
