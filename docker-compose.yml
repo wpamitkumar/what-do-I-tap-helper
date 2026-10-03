@@ -1,5 +1,5 @@
 services:
-  # 1. Ollama runtime service (Local LLM engine)
+  # local ollama runtime
   ollama:
     image: ollama/ollama:latest
     container_name: what-do-i-tap-ollama
@@ -17,7 +17,7 @@ services:
       retries: 5
       start_period: 10s
 
-  # 2. Main Gradio Web Application
+  # gradio web ui app
   app:
     build:
       context: .
@@ -38,8 +38,8 @@ services:
         condition: service_started
     restart: unless-stopped
 
-  # 3. Model Puller Helper (Optional init container to pre-pull Gemma 4)
-  # Run explicitly with: docker compose --profile init up model-puller
+  # optional helper to trigger model pull via curl without running docker exec
+  # run with: docker compose --profile init up model-puller
   model-puller:
     image: curlimages/curl:latest
     container_name: what-do-i-tap-model-puller

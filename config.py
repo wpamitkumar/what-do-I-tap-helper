@@ -4,7 +4,7 @@ import urllib.request
 import urllib.error
 from typing import Tuple, List
 
-# Core Configuration
+# default settings from environment
 OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434").rstrip("/")
 MODEL_NAME = os.environ.get("MODEL_NAME", "gemma4:e4b")
 IMAGE_MAX_SIZE = int(os.environ.get("IMAGE_MAX_SIZE", "1024"))
@@ -27,10 +27,7 @@ LANGUAGE_MAP = {
 }
 
 def check_ollama_connection() -> Tuple[bool, str, List[str]]:
-    """
-    Checks if Ollama is responding and lists available models using standard library.
-    Returns: (is_online, message, model_list)
-    """
+    # ping local ollama tags endpoint using standard library urllib
     url = f"{OLLAMA_BASE_URL}/api/tags"
     try:
         req = urllib.request.Request(url, headers={"User-Agent": "WhatDoITap/1.0"})
@@ -50,4 +47,3 @@ def check_ollama_connection() -> Tuple[bool, str, List[str]]:
                 return False, f"Ollama returned HTTP {res.status}", []
     except Exception:
         return False, f"Ollama offline ({OLLAMA_BASE_URL})", []
-

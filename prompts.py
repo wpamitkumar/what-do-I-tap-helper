@@ -1,4 +1,4 @@
-# System Prompts for "What do I tap?" Helper
+# prompts for gemma 4 vision instructions
 
 HELP_SYSTEM_PROMPT = """You are a patient helper for an older adult who is not comfortable with smartphones.
 You are shown a screenshot and a question. Reply ONLY in {lang}.
@@ -23,8 +23,7 @@ lookalike sender names, prizes or refunds, requests to install apps.
 Max 3 reasons, each under 15 words."""
 
 
-# Preset realistic responses for built-in demo screenshots
-# Used if Ollama is unreachable, or during offline dry-run demos
+# pre-baked sample responses for dry-runs or when ollama is still pulling models
 DEMO_RESPONSES = {
     "bill": {
         "help": {

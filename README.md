@@ -1,10 +1,10 @@
-# 📱 "What do I tap?" Helper
+# "What do I tap?" Helper
 
 A private, 100% offline multimodal AI assistant that explains confusing smartphone screens in **Gujarati**, **Hindi**, and **English**, and detects financial fraud, phishing links, and cyber scams before users tap them.
 
 ---
 
-## 🏛️ Architecture
+## Architecture
 
 The application is architected to run entirely on-device with zero cloud dependencies. No screenshots, credentials, or personal queries ever leave the host machine.
 
@@ -41,7 +41,7 @@ The application is architected to run entirely on-device with zero cloud depende
 
 ---
 
-## 📂 File Structure
+## File Structure
 
 ```
 what-do-I-tap-helper/
@@ -68,27 +68,10 @@ what-do-I-tap-helper/
     └── pull_model.sh           # Helper script to pull Gemma 4 into Ollama container or host
 ```
 
----
-
-## 📦 Third-Party Resources & Credits
-
-This project relies on the following open-source libraries, models, and tools:
-
-| Resource | Author / Provider | License | Purpose / Role |
-| :--- | :--- | :--- | :--- |
-| **[Gemma 4](https://ai.google.dev/gemma)** | Google DeepMind / Google | Gemma Terms of Use | Lightweight, state-of-the-art multimodal vision-language foundation model. |
-| **[Ollama](https://github.com/ollama/ollama)** | Ollama Team | MIT | Local inference runtime engine for running open-weights LLMs. |
-| **[Gradio](https://github.com/gradio-app/gradio)** | Hugging Face Gradio Team | Apache 2.0 | Reactive web UI framework for ML and multimodal applications. |
-| **[Pillow (PIL)](https://python-pillow.org/)** | Jeffrey A. Clark & Contributors | HPND | Image manipulation, resizing, alpha compositing, and thumbnail generation. |
-| **[Requests](https://requests.readthedocs.io/)** | Kenneth Reitz & Contributors | Apache 2.0 | HTTP client for interacting with the local Ollama API. |
-| **[Pydantic](https://docs.pydantic.dev/)** | Samuel Colvin & Contributors | MIT | Data validation and schema parsing. |
-| **[Web Speech API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Speech_API)** | W3C / Browser Standard | Open Web Standard | In-browser client-side text-to-speech without external API latency. |
-| **[gTTS](https://github.com/pndurette/gTTS)** | Pierre Nicolas Durette | MIT | Optional text-to-speech audio rendering utility. |
-| **Demo UI Assets** | Generated in-repo | GPL-3.0 | Synthetic smartphone interface mockups generated via `generate_demo_assets.py`. |
 
 ---
 
-## 🚀 Steps to Run the Project
+## Steps to Run the Project
 
 ### Option A: Running with Docker (Recommended)
 
@@ -138,7 +121,7 @@ Open **[http://localhost:7860](http://localhost:7860)** in your browser.
 
 ---
 
-## ⚙️ Configuration (`.env`)
+## Configuration (`.env`)
 
 | Variable | Default Value | Description |
 | :--- | :--- | :--- |
@@ -151,7 +134,25 @@ Open **[http://localhost:7860](http://localhost:7860)** in your browser.
 
 ---
 
-## 📄 License
+## Third-Party Resources & Credits
+
+This project relies on the following open-source libraries, models, and tools:
+
+| Resource | Author / Provider | License | Purpose / Role |
+| :--- | :--- | :--- | :--- |
+| **[Gemma 4](https://ai.google.dev/gemma)** | Google DeepMind / Google | Gemma Terms of Use | Lightweight, state-of-the-art multimodal vision-language foundation model. |
+| **[Ollama](https://github.com/ollama/ollama)** | Ollama Team | MIT | Local inference runtime engine for running open-weights LLMs. |
+| **[Gradio](https://github.com/gradio-app/gradio)** | Hugging Face Gradio Team | Apache 2.0 | Reactive web UI framework for ML and multimodal applications. |
+| **[Pillow (PIL)](https://python-pillow.org/)** | Jeffrey A. Clark & Contributors | HPND | Image manipulation, resizing, alpha compositing, and thumbnail generation. |
+| **[Requests](https://requests.readthedocs.io/)** | Kenneth Reitz & Contributors | Apache 2.0 | HTTP client for interacting with the local Ollama API. |
+| **[Pydantic](https://docs.pydantic.dev/)** | Samuel Colvin & Contributors | MIT | Data validation and schema parsing. |
+| **[Web Speech API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Speech_API)** | W3C / Browser Standard | Open Web Standard | In-browser client-side text-to-speech without external API latency. |
+| **[gTTS](https://github.com/pndurette/gTTS)** | Pierre Nicolas Durette | MIT | Optional text-to-speech audio rendering utility. |
+| **Demo UI Assets** | Generated in-repo | GPL-3.0 | Synthetic smartphone interface mockups generated via `generate_demo_assets.py`. |
+
+---
+
+## License
 
 This project is licensed under the **GNU General Public License v3.0 (GPL-3.0)**.  
 See the [LICENSE](LICENSE) file for the complete terms and conditions.

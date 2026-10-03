@@ -27,7 +27,7 @@ from prompts import (
     DEMO_RESPONSES
 )
 
-# Optional gTTS for offline/local audio generation fallback
+# optional audio generator if gtts is installed
 try:
     from gtts import gTTS
     TTS_AVAILABLE = True
@@ -37,6 +37,7 @@ except ImportError:
 BASE_DIR = Path(__file__).parent
 DEMO_DIR = BASE_DIR / "demo"
 
+# labels & styling classes for the scam verdicts
 ICONS = {
     "SAFE": "🟢 SAFE (સુરક્ષિત / सुरक्षित)",
     "SUSPICIOUS": "🟡 SUSPICIOUS (શંકાસ્પદ / संदेहास्पद)",
@@ -50,10 +51,7 @@ BADGE_CLASSES = {
 }
 
 def encode_image(img) -> str:
-    """
-    Safely resizes and encodes an image (PIL Image, numpy array, or file path)
-    to a base64 JPEG string, gracefully handling RGBA transparency.
-    """
+    # accept file path, pil image, or numpy array from gradio
     if isinstance(img, str):
         img = Image.open(img)
     elif not isinstance(img, Image.Image):
@@ -64,7 +62,7 @@ def encode_image(img) -> str:
         except Exception:
             pass
 
-    # Handle transparent background by compositing onto clean white canvas
+    # flatten alpha onto white canvas so screenshots with transparency don't turn black
     if img.mode in ("RGBA", "LA") or (img.mode == "P" and "transparency" in img.info):
         bg = Image.new("RGB", img.size, (255, 255, 255))
         rgba_img = img.convert("RGBA")
@@ -73,16 +71,17 @@ def encode_image(img) -> str:
     else:
         img = img.convert("RGB")
 
+    # resize to reasonable dimensions for faster vision inference
     img.thumbnail((IMAGE_MAX_SIZE, IMAGE_MAX_SIZE), Image.Resampling.LANCZOS)
     buf = io.BytesIO()
     img.save(buf, format="JPEG", quality=85)
     return base64.b64encode(buf.getvalue()).decode("utf-8")
 
 def detect_sample_type(question: str = "") -> str:
-    """Heuristic helper to detect demo sample image for offline fallback mode."""
+    # matches user intent to one of our canned demo answers when offline
     q_lower = (question or "").lower()
 
-    # 1. Delivery & E-commerce order
+    # package delivery questions
     if any(k in q_lower for k in [
         "order", "deliver", "package", "tracking",
         "ઓર્ડર", "સામાન", "ડિલિવરી",
@@ -90,7 +89,7 @@ def detect_sample_type(question: str = "") -> str:
     ]):
         return "order"
 
-    # 2. Settings & Font size
+    # font and settings adjustments
     if any(k in q_lower for k in [
         "text", "big", "font", "size", "settings", "display", "zoom",
         "મોટા", "અક્ષર", "સેટિંગ્સ", "ડિસ્પ્લે",
@@ -98,7 +97,7 @@ def detect_sample_type(question: str = "") -> str:
     ]):
         return "settings"
 
-    # 3. Bill payment
+    # electricity / phone bills
     if any(k in q_lower for k in [
         "bill", "pay", "due", "electricity", "light",
         "લાઈટ", "બિલ", "રૂપિયા", "ચૂકવવું", "ભરવું",
@@ -106,7 +105,7 @@ def detect_sample_type(question: str = "") -> str:
     ]):
         return "bill"
 
-    # 4. Scam & phishing keywords
+    # security warnings / phishing sms
     if any(k in q_lower for k in [
         "scam", "sms", "otp", "kyc", "fake", "fraud", "phish", "urgent", "safe", "danger",
         "બ્લોક", "ઓટીપી", "કેવાયસી", "ફ્રોડ", "છેતરપિંડી", "શંકાસ્પદ", "સુરક્ષિત",
@@ -117,10 +116,7 @@ def detect_sample_type(question: str = "") -> str:
     return "bill"
 
 def call_ollama(system_prompt: str, user_prompt: str, img, as_json: bool = False):
-    """
-    Calls Ollama REST API /api/chat with multimodal vision input.
-    Returns: (content, is_fallback, error_message)
-    """
+    # posts prompt + base64 screenshot to local ollama endpoint
     api_url = f"{OLLAMA_BASE_URL}/api/chat"
     try:
         img_b64 = encode_image(img)
@@ -160,9 +156,10 @@ def call_ollama(system_prompt: str, user_prompt: str, img, as_json: bool = False
         return None, False, err_msg
 
 def extract_json(raw: str) -> dict:
-    """Robustly extracts JSON dictionary from LLM output."""
+    # grab json object even if the model added surrounding chat or markdown code blocks
     text = raw.strip()
-    # 1. Try direct parsing
+
+    # direct parse
     try:
         data = json.loads(text)
         if isinstance(data, dict):
@@ -170,7 +167,7 @@ def extract_json(raw: str) -> dict:
     except Exception:
         pass
 
-    # 2. Try markdown fenced code block
+    # inside ```json ... ```
     code_match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", text, re.DOTALL)
     if code_match:
         try:
@@ -180,7 +177,7 @@ def extract_json(raw: str) -> dict:
         except Exception:
             pass
 
-    # 3. Locate outer curly braces
+    # between outer { and }
     start = text.find("{")
     end = text.rfind("}")
     if start != -1 and end != -1 and end > start:
@@ -194,9 +191,7 @@ def extract_json(raw: str) -> dict:
     raise ValueError(f"Could not parse valid JSON from output:\n{raw[:150]}")
 
 def help_me(img, custom_q, preset_q, lang_choice):
-    """
-    Tab 1: Explain step-by-step what to tap on the screen.
-    """
+    # tab 1 pipeline: simple numbered steps in the requested language
     if img is None:
         return "⚠️ **કૃપા કરીને પહેલા તમારા ફોનનો સ્ક્રીનશોટ અપલોડ કરો.** / **Please upload a screenshot first.**", None
 
@@ -210,9 +205,9 @@ def help_me(img, custom_q, preset_q, lang_choice):
 
     if is_fallback or not raw_output:
         if not is_fallback and err_detail:
-            # Fallback is turned off and error occurred
             return f"❌ **Error connecting to Ollama:**\n\n`{err_detail}`\n\n*Please ensure Ollama is running and model '{MODEL_NAME}' is pulled.*", None
 
+        # fallback to verified demo text if model isn't active
         sample_key = detect_sample_type(question)
         demo_text = DEMO_RESPONSES.get(sample_key, {}).get("help", {}).get(lang, DEMO_RESPONSES["bill"]["help"]["English"])
         result = (
@@ -228,9 +223,7 @@ def help_me(img, custom_q, preset_q, lang_choice):
     return result, audio_file
 
 def scam_check(img, lang_choice):
-    """
-    Tab 2: Check screenshot/message for fraud, phishing, or financial scams.
-    """
+    # tab 2 pipeline: returns json verdict and formats into a high-visibility badge
     if img is None:
         return "⚠️ **કૃપા કરીને પહેલા સ્ક્રીનશોટ અપલોડ કરો.** / **Please upload a screenshot first.**", None
 
@@ -252,6 +245,7 @@ def scam_check(img, lang_choice):
             d = extract_json(raw_output)
             is_demo_note = ""
         except Exception:
+            # show raw text if json formatting somehow breaks
             return f"### Analysis Output\n\n{raw_output}", None
 
     verdict = str(d.get("verdict", "SUSPICIOUS")).upper()
@@ -286,7 +280,7 @@ def scam_check(img, lang_choice):
     return result, audio_file
 
 def generate_speech_file(text: str, lang: str):
-    """Generates audio speech file using gTTS if available."""
+    # renders audio using local gTTS file if available
     if not TTS_AVAILABLE:
         return None
     try:
@@ -300,14 +294,14 @@ def generate_speech_file(text: str, lang: str):
         return None
 
 def load_sample_image(filename: str):
-    """Loads a demo image from the demo folder."""
+    # helper for the 1-click sample test buttons
     path = DEMO_DIR / filename
     if path.exists():
         return Image.open(path)
     return None
 
 def get_system_status():
-    """Returns current Ollama & model status."""
+    # pings local server and models for the info tab
     is_online, msg, models = check_ollama_connection()
     status_icon = "🟢" if is_online else "🟠"
     models_str = ", ".join(models) if models else "None"
@@ -319,7 +313,7 @@ def get_system_status():
 **Privacy Status:** 🔒 100% Offline (No Cloud Data Transmission)
 """
 
-# Custom CSS for Large, Senior-Friendly UI
+# larger typography and contrasting backgrounds for older eyes
 CUSTOM_CSS = """
 body, .gradio-container {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
@@ -384,6 +378,7 @@ body, .gradio-container {
 }
 """
 
+# browser speech synthesis snippets for 100% offline tts
 JS_SPEAK_HELP = """
 () => {
     const el = document.getElementById("help-output-container");
@@ -430,7 +425,7 @@ with gr.Blocks(title="What do I tap? Helper (Offline Gemma 4)", css=CUSTOM_CSS, 
     """)
 
     with gr.Tabs():
-        # TAB 1: HELP ME
+        # tab 1: help me with screen actions
         with gr.Tab("👉 1. Help me (મને મદદ કરો / मुझे मदद चाहिए)"):
             with gr.Row():
                 with gr.Column(scale=5):
@@ -479,26 +474,26 @@ with gr.Blocks(title="What do I tap? Helper (Offline Gemma 4)", css=CUSTOM_CSS, 
                         btn_stop_help = gr.Button("⏹️ Stop Audio", size="sm", js=JS_STOP_SPEAK)
                     help_audio = gr.Audio(label="🎧 Recorded Audio File (Optional)", interactive=False)
 
-            # Auto-update custom question when preset radio clicked
+            # sync text box when user clicks a preset question
             help_preset_q.change(
                 lambda q: q.split(" (")[0] if " (" in q else q,
                 inputs=help_preset_q,
                 outputs=help_custom_q
             )
 
-            # Load demo samples
+            # one-click sample buttons
             btn_sample_bill.click(lambda: load_sample_image("1_electricity_bill.png"), outputs=help_img)
             btn_sample_settings.click(lambda: load_sample_image("3_phone_settings.png"), outputs=help_img)
             btn_sample_safe.click(lambda: load_sample_image("4_order_delivered.png"), outputs=help_img)
 
-            # Explain button
+            # run vision pipeline
             btn_help.click(
                 help_me,
                 inputs=[help_img, help_custom_q, help_preset_q, help_lang],
                 outputs=[help_output, help_audio]
             )
 
-        # TAB 2: IS THIS SAFE?
+        # tab 2: scam & phishing verification
         with gr.Tab("🛡️ 2. Is this safe? (શું આ સુરક્ષિત છે? / क्या यह सुरक्षित है?)"):
             with gr.Row():
                 with gr.Column(scale=5):
@@ -538,14 +533,14 @@ with gr.Blocks(title="What do I tap? Helper (Offline Gemma 4)", css=CUSTOM_CSS, 
                 outputs=[scam_output, scam_audio]
             )
 
-        # TAB 3: SYSTEM INFO & DOCKER GUIDE
-        with gr.Tab("ℹ️ System Status & Hackathon Guide"):
+        # tab 3: system connection & commands
+        with gr.Tab("ℹ️ System Status & Info"):
             status_box = gr.Markdown(value=get_system_status())
             btn_refresh_status = gr.Button("🔄 Refresh Connection Status")
             btn_refresh_status.click(get_system_status, outputs=status_box)
 
             gr.Markdown("""
-### 🚀 4-Hour Hackathon Setup & Commands:
+### 🚀 Setup & Model Commands:
 1. **Pull Model in Ollama:**
    ```bash
    ollama pull gemma4:e4b
@@ -554,10 +549,10 @@ with gr.Blocks(title="What do I tap? Helper (Offline Gemma 4)", css=CUSTOM_CSS, 
    ```bash
    docker compose up --build
    ```
-3. **Architecture Highlights:**
-   - **Privacy First:** Gemma 4 E4B instruction-tuned runs 100% locally on your machine.
-   - **Multilingual Support:** Gujarati, Hindi, and English.
-   - **Resilient Fallback:** Live Ollama API with graceful demo fallback so your presentation never crashes on stage!
+3. **Core Details:**
+   - **Privacy First:** Gemma 4 runs 100% locally on your machine with zero cloud calls.
+   - **Multilingual Support:** Native reasoning in Gujarati, Hindi, and English.
+   - **Resilient Fallback:** Automatically falls back to verified sample data if Ollama is still downloading.
             """)
 
 if __name__ == "__main__":

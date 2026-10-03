@@ -24,33 +24,31 @@ def generate_with_pil():
         font_sm = get_font(18)
         font_md = get_font(24)
 
-        # Phone Status bar
+        # fake phone status bar
         draw.rectangle([(0, 0), (width, 48)], fill=(30, 35, 45))
         draw.text((24, 14), "10:30 AM", fill=(255, 255, 255), font=font_sm)
         draw.text((width - 120, 14), "5G  | 98%", fill=(255, 255, 255), font=font_sm)
 
-        # App Bar
+        # top app bar
         draw.rectangle([(0, 48), (width, 130)], fill=accent_color)
         draw.text((30, 75), title_text, fill=(255, 255, 255), font=font_md)
 
-        # Build custom content
+        # draw screen content
         content_builder(draw, width, height, get_font)
 
-        # Phone Navigation Bar (Bottom)
+        # bottom navigation bar
         draw.rectangle([(0, height - 60), (width, height)], fill=(20, 24, 30))
-        # Home bar indicator
         draw.rounded_rectangle([(width // 2 - 80, height - 35), (width // 2 + 80, height - 25)], radius=5, fill=(180, 180, 180))
 
         return img
 
-    # 1. Electricity Bill Screen
+    # utility bill screen
     def draw_bill(draw, w, h, get_font=None):
         f_title = get_font(26) if get_font else None
         f_text = get_font(20) if get_font else None
         f_amount = get_font(36) if get_font else None
         f_btn = get_font(26) if get_font else None
 
-        # Card
         draw.rounded_rectangle([(30, 160), (w - 30, 520)], radius=16, fill=(255, 255, 255), outline=(220, 224, 230), width=2)
         draw.text((60, 190), "GUJARAT ELECTRICITY BOARD (UGVCL)", fill=(80, 90, 105), font=f_title)
         draw.text((60, 235), "Consumer No: 08392-49102-1", fill=(30, 40, 55), font=f_text)
@@ -59,11 +57,9 @@ def generate_with_pil():
         draw.text((60, 355), "₹ 1,450.00", fill=(25, 135, 84), font=f_amount)
         draw.text((60, 435), "Due Date: 15 Oct 2026", fill=(220, 53, 69), font=f_text)
 
-        # Green Pay Now button
         draw.rounded_rectangle([(40, 560), (w - 40, 650)], radius=12, fill=(25, 135, 84))
         draw.text((w // 2 - 75, 590), "PAY NOW", fill=(255, 255, 255), font=f_btn)
 
-        # Security note
         draw.rectangle([(40, 680), (w - 40, 780)], fill=(235, 245, 255), outline=(180, 210, 245))
         draw.text((60, 705), "Official Utility Payment Portal", fill=(13, 110, 253), font=f_text)
         draw.text((60, 740), "Never share your UPI PIN or Bank OTP with anyone.", fill=(100, 100, 100), font=f_text)
@@ -71,18 +67,17 @@ def generate_with_pil():
     img_bill = create_mockup("Electricity Bill Payment", (13, 110, 253), draw_bill)
     img_bill.save(DEMO_DIR / "1_electricity_bill.png")
 
-    # 2. Fake Bank SMS Phishing Screen
+    # phishing bank sms
     def draw_scam(draw, w, h, get_font=None):
         f_sender = get_font(24) if get_font else None
         f_sub = get_font(18) if get_font else None
         f_body = get_font(22) if get_font else None
 
-        # SMS conversation card
         draw.rounded_rectangle([(30, 160), (w - 30, 300)], radius=12, fill=(255, 255, 255), outline=(220, 224, 230))
         draw.text((60, 185), "Sender: VK-SBI-ALERT (Unknown)", fill=(220, 53, 69), font=f_sender)
         draw.text((60, 225), "Today, 10:14 AM", fill=(120, 120, 120), font=f_sub)
 
-        # Scam SMS Bubble
+        # fake urgent message bubble
         draw.rounded_rectangle([(30, 330), (w - 30, 680)], radius=16, fill=(255, 235, 235), outline=(230, 160, 160), width=2)
         lines = [
             "URGENT NOTICE:",
@@ -101,7 +96,6 @@ def generate_with_pil():
             draw.text((50, y_offset), line, fill=color, font=f_body)
             y_offset += 32
 
-        # Threat highlights
         draw.rectangle([(40, 720), (w - 40, 840)], fill=(255, 243, 205), outline=(255, 193, 7))
         draw.text((60, 750), "Warning Signs: Threatens penalty + fake urgent link", fill=(133, 100, 4), font=f_sub)
         draw.text((60, 790), "Legitimate banks never send unverified link URLs.", fill=(133, 100, 4), font=f_sub)
@@ -109,7 +103,7 @@ def generate_with_pil():
     img_scam = create_mockup("Messages (SMS)", (50, 60, 75), draw_scam)
     img_scam.save(DEMO_DIR / "2_fake_bank_sms.png")
 
-    # 3. Settings Screen (Font Size / Display)
+    # phone display settings
     def draw_settings(draw, w, h, get_font=None):
         f_title = get_font(24) if get_font else None
         f_sub = get_font(18) if get_font else None
@@ -140,7 +134,7 @@ def generate_with_pil():
     img_settings = create_mockup("Settings", (33, 37, 41), draw_settings)
     img_settings.save(DEMO_DIR / "3_phone_settings.png")
 
-    # 4. Genuine Order Delivery Screen
+    # genuine delivery screen
     def draw_order(draw, w, h, get_font=None):
         f_title = get_font(26) if get_font else None
         f_sub = get_font(20) if get_font else None
@@ -154,7 +148,7 @@ def generate_with_pil():
         draw.text((60, 335), "Package handed to resident at front door.", fill=(60, 70, 80), font=f_sub)
         draw.text((60, 375), "Item total: ₹ 820.00 (Paid via UPI)", fill=(100, 105, 115), font=f_sub)
 
-        # Buttons
+        # action buttons
         draw.rounded_rectangle([(40, 540), (w - 40, 620)], radius=10, fill=(255, 255, 255), outline=(13, 110, 253), width=2)
         draw.text((w // 2 - 60, 565), "Need Help?", fill=(13, 110, 253), font=f_btn)
 
@@ -164,10 +158,10 @@ def generate_with_pil():
     img_order = create_mockup("Order Details", (245, 130, 32), draw_order)
     img_order.save(DEMO_DIR / "4_order_delivered.png")
 
-    print("Successfully generated 4 demo screenshots with Pillow.")
+    print("Generated 4 demo screenshots with Pillow.")
 
 def generate_pure_python():
-    """Fallback generator using standard library zlib & struct to create PNGs"""
+    # builds simple valid PNGs using only stdlib if pillow is missing
     def write_png(filepath, width, height, get_rgb):
         raw = bytearray()
         for y in range(height):
@@ -191,36 +185,32 @@ def generate_pure_python():
 
     w, h = 400, 600
 
-    # 1. Bill
     def rgb_bill(x, y):
-        if y < 40: return (13, 110, 253) # header
-        if 480 < y < 540 and 40 < x < 360: return (25, 135, 84) # Pay button
-        if 80 < y < 350 and 30 < x < 370: return (255, 255, 255) # card
-        return (240, 243, 248) # bg
+        if y < 40: return (13, 110, 253)
+        if 480 < y < 540 and 40 < x < 360: return (25, 135, 84)
+        if 80 < y < 350 and 30 < x < 370: return (255, 255, 255)
+        return (240, 243, 248)
     write_png(DEMO_DIR / "1_electricity_bill.png", w, h, rgb_bill)
 
-    # 2. Scam SMS
     def rgb_scam(x, y):
         if y < 40: return (50, 60, 75)
-        if 100 < y < 300 and 30 < x < 370: return (255, 230, 230) # red alert box
+        if 100 < y < 300 and 30 < x < 370: return (255, 230, 230)
         return (245, 245, 247)
     write_png(DEMO_DIR / "2_fake_bank_sms.png", w, h, rgb_scam)
 
-    # 3. Settings
     def rgb_settings(x, y):
         if y < 40: return (33, 37, 41)
-        if 180 < y < 240 and 30 < x < 370: return (210, 235, 255) # Display highlighted
+        if 180 < y < 240 and 30 < x < 370: return (210, 235, 255)
         return (250, 250, 250)
     write_png(DEMO_DIR / "3_phone_settings.png", w, h, rgb_settings)
 
-    # 4. Safe Order
     def rgb_order(x, y):
         if y < 40: return (245, 130, 32)
         if 80 < y < 280 and 30 < x < 370: return (255, 255, 255)
         return (242, 244, 247)
     write_png(DEMO_DIR / "4_order_delivered.png", w, h, rgb_order)
 
-    print("Successfully generated 4 demo screenshots with standard library fallback.")
+    print("Generated 4 demo screenshots with stdlib.")
 
 if __name__ == "__main__":
     try:

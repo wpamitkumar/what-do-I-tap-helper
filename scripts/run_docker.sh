@@ -5,13 +5,13 @@ echo "=================================================="
 echo " Starting 'What do I tap?' Helper with Docker"
 echo "=================================================="
 
-# Check if Docker is running
+# make sure docker daemon is running
 if ! docker info > /dev/null 2>&1; then
     echo "❌ Error: Docker daemon is not running. Please start Docker Desktop and retry."
     exit 1
 fi
 
-# Detect docker compose version
+# support both modern 'docker compose' and older 'docker-compose'
 if docker compose version >/dev/null 2>&1; then
     COMPOSE="docker compose"
 elif command -v docker-compose >/dev/null 2>&1; then
