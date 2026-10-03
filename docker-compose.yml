@@ -1,0 +1,59 @@
+services:
+  # 1. Ollama runtime service (Local LLM engine)
+  ollama:
+    image: ollama/ollama:latest
+    container_name: what-do-i-tap-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_models:/root/.ollama
+    environment:
+      - OLLAMA_KEEP_ALIVE=24h
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:11434/api/tags || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # 2. Main Gradio Web Application
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: what-do-i-tap-app
+    ports:
+      - "7860:7860"
+    environment:
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - MODEL_NAME=${MODEL_NAME:-gemma4:e4b}
+      - GRADIO_SERVER_NAME=0.0.0.0
+      - GRADIO_SERVER_PORT=7860
+      - DEMO_FALLBACK=${DEMO_FALLBACK:-true}
+    volumes:
+      - ./demo:/app/demo
+    depends_on:
+      ollama:
+        condition: service_started
+    restart: unless-stopped
+
+  # 3. Model Puller Helper (Optional init container to pre-pull Gemma 4)
+  # Run explicitly with: docker compose --profile init up model-puller
+  model-puller:
+    image: curlimages/curl:latest
+    container_name: what-do-i-tap-model-puller
+    profiles: ["init"]
+    depends_on:
+      ollama:
+        condition: service_healthy
+    entrypoint: >
+      sh -c "
+        echo 'Pulling model ${MODEL_NAME:-gemma4:e4b} into Ollama...';
+        curl -s -X POST http://ollama:11434/api/pull -d '{\"name\": \"${MODEL_NAME:-gemma4:e4b}\", \"stream\": false}';
+        echo '\nModel pull completed!';
+      "
+
+volumes:
+  ollama_models:
+    name: what-do-i-tap-ollama-models
