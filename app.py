@@ -585,7 +585,8 @@ with gr.Blocks(title="What do I tap? Helper (Offline Gemma 4)", css=CUSTOM_CSS, 
                     )
 
                     with gr.Row():
-                        btn_voice_input = gr.Button("🎙️ Speak Question (માઈક્રોફોન બોલો)", size="sm", js=JS_LISTEN_QUESTION)
+                        btn_voice_input = gr.Button("🎙️ Speak Question (માઈક્રોફોન બોલો)", size="sm")
+                        btn_voice_input.click(None, None, None, js=JS_LISTEN_QUESTION)
 
                     btn_help = gr.Button("🔍 Explain Step-by-Step (મને સમજાવો)", variant="primary", elem_classes=["btn-large"])
 
@@ -600,8 +601,10 @@ with gr.Blocks(title="What do I tap? Helper (Offline Gemma 4)", css=CUSTOM_CSS, 
                             elem_classes=["step-card"]
                         )
                     with gr.Row():
-                        btn_speak_help = gr.Button("🔊 Read Aloud (Browser Voice)", size="sm", js=JS_SPEAK_HELP)
-                        btn_stop_help = gr.Button("⏹️ Stop Audio", size="sm", js=JS_STOP_SPEAK)
+                        btn_speak_help = gr.Button("🔊 Read Aloud (Browser Voice)", size="sm")
+                        btn_stop_help = gr.Button("⏹️ Stop Audio", size="sm")
+                        btn_speak_help.click(None, None, None, js=JS_SPEAK_HELP)
+                        btn_stop_help.click(None, None, None, js=JS_STOP_SPEAK)
                     help_audio = gr.Audio(label="🎧 Recorded Audio File (Optional)", interactive=False)
 
             # sync text box when user clicks a preset question
@@ -650,9 +653,12 @@ with gr.Blocks(title="What do I tap? Helper (Offline Gemma 4)", css=CUSTOM_CSS, 
                             elem_classes=["step-card"]
                         )
                     with gr.Row():
-                        btn_speak_scam = gr.Button("🔊 Read Aloud (Browser Voice)", size="sm", js=JS_SPEAK_SCAM)
-                        btn_stop_scam = gr.Button("⏹️ Stop Audio", size="sm", js=JS_STOP_SPEAK)
-                        btn_share_family = gr.Button("👨‍👩‍👦 Alert Family on WhatsApp", size="sm", variant="secondary", js=JS_SHARE_WHATSAPP)
+                        btn_speak_scam = gr.Button("🔊 Read Aloud (Browser Voice)", size="sm")
+                        btn_stop_scam = gr.Button("⏹️ Stop Audio", size="sm")
+                        btn_share_family = gr.Button("👨‍👩‍👦 Alert Family on WhatsApp", size="sm", variant="secondary")
+                        btn_speak_scam.click(None, None, None, js=JS_SPEAK_SCAM)
+                        btn_stop_scam.click(None, None, None, js=JS_STOP_SPEAK)
+                        btn_share_family.click(None, None, None, js=JS_SHARE_WHATSAPP)
                     scam_audio = gr.Audio(label="🎧 Recorded Audio File (Optional)", interactive=False)
 
             btn_sample_scam.click(lambda: load_sample_image("2_fake_bank_sms.png"), outputs=scam_img)
