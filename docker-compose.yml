@@ -9,6 +9,9 @@ services:
       - ollama_models:/root/.ollama
     environment:
       - OLLAMA_KEEP_ALIVE=24h
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:11434/api/tags || exit 1"]
