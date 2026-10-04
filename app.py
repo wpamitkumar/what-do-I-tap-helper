@@ -528,14 +528,21 @@ JS_LISTEN_QUESTION = """
 JS_SHARE_WHATSAPP = """
 () => {
     const el = document.getElementById("scam-output-container");
-    const summary = el ? (el.innerText || el.textContent).substring(0, 250) : "Suspicious phone message.";
-    const text = encodeURIComponent("⚠️ Family Alert: I received this suspicious message on my phone. 'What do I tap?' flagged it as potentially dangerous:\n\n" + summary + "\n\nPlease check before I tap anything.");
-    window.open("https://wa.me/?text=" + text, "_blank");
+    const summary = el ? (el.innerText || el.textContent).slice(0, 250) : "Suspicious phone message.";
+    const msg = [
+        "⚠️ Family Alert: I received a suspicious message on my phone.",
+        summary,
+        "Please check before I tap anything."
+    ].join("\\n\\n");
+    window.open("https://wa.me/?text=" + encodeURIComponent(msg), "_blank");
 }
 """
 
-with gr.Blocks(title="What do I tap? Helper (Offline Gemma 4)", css=CUSTOM_CSS, theme=gr.themes.Soft()) as demo:
-    gr.HTML("""
+with gr.Blocks(title="What do I tap? Helper (Offline Gemma 4)") as demo:
+    gr.HTML(f"""
+    <style>
+    {CUSTOM_CSS}
+    </style>
     <div class="main-title">
         <h1 style="font-size: 2.3rem; margin-bottom: 6px;">📱 What do I tap? / મને ક્યાં અડવું?</h1>
         <p style="font-size: 1.2rem; color: #555; margin-top: 0;">
@@ -696,8 +703,17 @@ with gr.Blocks(title="What do I tap? Helper (Offline Gemma 4)", css=CUSTOM_CSS, 
 
 if __name__ == "__main__":
     print(f"Starting 'What do I tap?' Helper on {GRADIO_SERVER_NAME}:{GRADIO_SERVER_PORT}...")
-    demo.launch(
-        server_name=GRADIO_SERVER_NAME,
-        server_port=GRADIO_SERVER_PORT,
-        share=False
-    )
+    launch_kwargs = {
+        "server_name": GRADIO_SERVER_NAME,
+        "server_port": GRADIO_SERVER_PORT,
+        "share": False,
+    }
+    try:
+        import inspect
+        sig = inspect.signature(demo.launch)
+        if "theme" in sig.parameters:
+            launch_kwargs["theme"] = gr.themes.Soft()
+    except Exception:
+        pass
+
+    demo.launch(**launch_kwargs)
