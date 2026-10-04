@@ -7,7 +7,7 @@ from typing import Tuple, List
 # default settings from environment
 OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434").rstrip("/")
 MODEL_NAME = os.environ.get("MODEL_NAME", "gemma4:e4b")
-IMAGE_MAX_SIZE = int(os.environ.get("IMAGE_MAX_SIZE", "1024"))
+IMAGE_MAX_SIZE = int(os.environ.get("IMAGE_MAX_SIZE", "640"))
 REQUEST_TIMEOUT = int(os.environ.get("REQUEST_TIMEOUT", "180"))
 DEMO_FALLBACK = os.environ.get("DEMO_FALLBACK", "true").lower() in ("true", "1", "yes")
 

@@ -179,7 +179,7 @@ def detect_sample_type(question: str = "") -> str:
 
     return "bill"
 
-def call_ollama(system_prompt: str, user_prompt: str, img, as_json: bool = False):
+def call_ollama(system_prompt: str, user_prompt: str, img, as_json: bool = False, max_tokens: int = 180):
     # posts prompt + base64 screenshot to local ollama endpoint
     api_url = f"{OLLAMA_BASE_URL}/api/chat"
     try:
@@ -190,6 +190,7 @@ def call_ollama(system_prompt: str, user_prompt: str, img, as_json: bool = False
     payload = {
         "model": MODEL_NAME,
         "stream": False,
+        "think": False,
         "messages": [
             {"role": "system", "content": system_prompt},
             {
@@ -197,7 +198,12 @@ def call_ollama(system_prompt: str, user_prompt: str, img, as_json: bool = False
                 "content": user_prompt,
                 "images": [img_b64]
             }
-        ]
+        ],
+        "options": {
+            "num_predict": max_tokens,
+            "temperature": 0.1,
+            "top_p": 0.9
+        }
     }
     if as_json:
         payload["format"] = "json"
@@ -211,7 +217,11 @@ def call_ollama(system_prompt: str, user_prompt: str, img, as_json: bool = False
             return None, False, err_msg
         response.raise_for_status()
         data = response.json()
-        content = data.get("message", {}).get("content", "")
+        msg = data.get("message", {})
+        content = msg.get("content", "").strip()
+        # fallback to thinking text if content field is blank
+        if not content and msg.get("thinking"):
+            content = msg.get("thinking", "").strip()
         return content, False, None
     except Exception as err:
         err_msg = f"Ollama connection error ({OLLAMA_BASE_URL}): {err}"
@@ -257,7 +267,10 @@ def extract_json(raw: str) -> dict:
 def help_me(img, custom_q, preset_q, lang_choice):
     # tab 1 pipeline: simple numbered steps and annotated tap overlay
     if img is None:
-        return "⚠️ **કૃપા કરીને પહેલા તમારા ફોનનો સ્ક્રીનશોટ અપલોડ કરો.** / **Please upload a screenshot first.**", None, None
+        yield "⚠️ **કૃપા કરીને પહેલા તમારા ફોનનો સ્ક્રીનશોટ અપલોડ કરો.** / **Please upload a screenshot first.**", None, None
+        return
+
+    yield "⏳ **Gemma 4 is analyzing your screen... (સ્ક્રીન તપાસી રહ્યા છીએ...)**\n\n*Running multimodal inference...*", None, None
 
     lang = LANGUAGE_MAP.get(lang_choice, "Gujarati")
     question = (custom_q or "").strip()
@@ -265,11 +278,12 @@ def help_me(img, custom_q, preset_q, lang_choice):
         question = preset_q or "What should I do on this screen?"
 
     sys_prompt = HELP_SYSTEM_PROMPT.format(lang=lang)
-    raw_output, is_fallback, err_detail = call_ollama(sys_prompt, question, img, as_json=False)
+    raw_output, is_fallback, err_detail = call_ollama(sys_prompt, question, img, as_json=False, max_tokens=180)
 
     if is_fallback or not raw_output:
         if not is_fallback and err_detail:
-            return f"❌ **Error connecting to Ollama:**\n\n`{err_detail}`\n\n*Please ensure Ollama is running and model '{MODEL_NAME}' is pulled.*", None, None
+            yield f"❌ **Error connecting to Ollama:**\n\n`{err_detail}`\n\n*Please ensure Ollama is running and model '{MODEL_NAME}' is pulled.*", None, None
+            return
 
         # fallback to verified demo text if model isn't active
         sample_key = detect_sample_type(question)
@@ -285,22 +299,26 @@ def help_me(img, custom_q, preset_q, lang_choice):
 
     annotated_overlay = draw_tap_overlay(img, result, question)
     audio_file = generate_speech_file(result, lang)
-    return result, annotated_overlay, audio_file
+    yield result, annotated_overlay, audio_file
 
 def scam_check(img, lang_choice):
     # tab 2 pipeline: returns json verdict, adds upi fraud protection, formats into card
     if img is None:
-        return "⚠️ **કૃપા કરીને પહેલા સ્ક્રીનશોટ અપલોડ કરો.** / **Please upload a screenshot first.**", None
+        yield "⚠️ **કૃપા કરીને પહેલા સ્ક્રીનશોટ અપલોડ કરો.** / **Please upload a screenshot first.**", None
+        return
+
+    yield "⏳ **Checking for fraud & scam indicators with Gemma 4... (સાયબર ફ્રોડ અને સલામતી તપાસી રહ્યા છીએ...)**\n\n*Running safety analysis...*", None
 
     lang = LANGUAGE_MAP.get(lang_choice, "Gujarati")
     sys_prompt = SCAM_SYSTEM_PROMPT.format(lang=lang)
     user_prompt = "Check this screen or message for scam indicators, fraud risk, and provide safety verdict."
 
-    raw_output, is_fallback, err_detail = call_ollama(sys_prompt, user_prompt, img, as_json=True)
+    raw_output, is_fallback, err_detail = call_ollama(sys_prompt, user_prompt, img, as_json=True, max_tokens=180)
 
     if is_fallback or not raw_output:
         if not is_fallback and err_detail:
-            return f"❌ **Error connecting to Ollama:**\n\n`{err_detail}`", None
+            yield f"❌ **Error connecting to Ollama:**\n\n`{err_detail}`", None
+            return
 
         sample_key = "scam_sms"
         d = DEMO_RESPONSES.get(sample_key, {}).get("scam", {}).get(lang, DEMO_RESPONSES["scam_sms"]["scam"]["English"])
@@ -311,7 +329,8 @@ def scam_check(img, lang_choice):
             is_demo_note = ""
         except Exception:
             # show raw text if json formatting somehow breaks
-            return f"### Analysis Output\n\n{raw_output}", None
+            yield f"### Analysis Output\n\n{raw_output}", None
+            return
 
     verdict = str(d.get("verdict", "SUSPICIOUS")).upper()
     reasons = d.get("reasons", [])
@@ -351,7 +370,7 @@ def scam_check(img, lang_choice):
 > 🛡️ **સુવર્ણ નિયમ / Golden Rule:** બેંક કે કોઈપણ સરકારી અધિકારી ક્યારેય ફોન કે SMS પર તમારો **OTP, UPI PIN, ATM કાર્ડ નંબર કે પાસવર્ડ** પૂછતા નથી. ક્યારેય કોઈની સાથે શેર કરશો નહીં!
 """
     audio_file = generate_speech_file(f"{verdict}. {advice}", lang)
-    return result, audio_file
+    yield result, audio_file
 
 def generate_speech_file(text: str, lang: str):
     # renders audio using local gTTS file if available
