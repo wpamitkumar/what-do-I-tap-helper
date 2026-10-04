@@ -9,6 +9,7 @@ OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434").rs
 MODEL_NAME = os.environ.get("MODEL_NAME", "gemma4:e4b")
 IMAGE_MAX_SIZE = int(os.environ.get("IMAGE_MAX_SIZE", "640"))
 REQUEST_TIMEOUT = int(os.environ.get("REQUEST_TIMEOUT", "180"))
+DEFAULT_MAX_TOKENS = int(os.environ.get("DEFAULT_MAX_TOKENS", "300"))
 DEMO_FALLBACK = os.environ.get("DEMO_FALLBACK", "true").lower() in ("true", "1", "yes")
 
 GRADIO_SERVER_NAME = os.environ.get("GRADIO_SERVER_NAME", "0.0.0.0")

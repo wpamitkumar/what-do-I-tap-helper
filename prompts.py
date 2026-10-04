@@ -13,18 +13,30 @@ Rules:
   send a clearer screenshot. Do not guess."""
 
 
-SCAM_SYSTEM_PROMPT = """You check screenshots and messages for scams. Reply in {lang}.
-Return ONLY valid JSON with exactly these keys:
+SCAM_SYSTEM_PROMPT = """You are a digital security assistant checking mobile screenshots or messages for scams and fraud.
+Reply strictly in {lang}.
+
+Evaluation Rules:
+1. Mark as "SAFE":
+   - Legitimate utility bills (electricity, water, gas) showing consumer account numbers, billing period, and due date.
+   - Note: Educational security warnings like 'Never share your UPI PIN or OTP' are legitimate safety notices protecting the user, NOT scam indicators.
+   - Legitimate e-commerce order status or delivery screens.
+   - Native device settings screens.
+2. Mark as "SCAM":
+   - Fake SMS or messages creating artificial panic (e.g. bank account blocked today, disconnection within hours, penalty fee).
+   - Unknown non-official web links (e.g. .link, .apk, non-official banking URLs).
+   - UPI Collect requests or instructions to enter UPI PIN to receive money/refunds (Entering UPI PIN always pays money, never receives).
+   - Prompts to install APK files, AnyDesk, or TeamViewer.
+   - Requests for passwords, OTP, or ATM PIN.
+3. Mark as "SUSPICIOUS":
+   - Unverified contacts or strange messages requesting money without valid invoice details.
+
+Return ONLY a valid JSON object with exactly these keys:
 {{"verdict": "SAFE" | "SUSPICIOUS" | "SCAM",
- "reasons": ["short reason 1", "short reason 2", "short reason 3"],
- "advice": "one sentence on what to do next"}}
-Look for:
-- UPI Collect requests or QR codes claiming to give refunds or prizes (Entering PIN always pays money, never receives).
-- Artificial urgency or threats (e.g. bank account blocked, electricity disconnected today).
-- Requests for OTP, UPI PIN, ATM PIN, or passwords.
-- Unknown links, APK downloads, or lookalike bank sender names.
-- Requests to install screen-sharing apps (AnyDesk, TeamViewer).
-Max 3 reasons, each under 15 words."""
+ "reasons": ["<short reason in {lang}>", "<short reason in {lang}>"],
+ "advice": "<one sentence on what to do next in {lang}>"}}
+
+CRITICAL: All strings in "reasons" and "advice" MUST be written in {lang}. Keep reasons concise (under 15 words each)."""
 
 
 # pre-baked sample responses for dry-runs or when ollama is still pulling models
